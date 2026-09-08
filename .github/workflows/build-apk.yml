@@ -3,6 +3,9 @@ name: Setup NegosMint Flutter Project
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   setup:
     runs-on: ubuntu-latest
@@ -10,6 +13,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -33,4 +38,4 @@ jobs:
         run: |
           git add .
           git commit -m "Create NegosMint Flutter project" || echo "Nothing to commit"
-          git push origin main
+          git push origin HEAD:main
