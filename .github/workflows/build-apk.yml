@@ -1,10 +1,10 @@
-name: Build NegosMint APK
+name: Setup NegosMint Flutter Project
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  setup:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,17 +24,13 @@ jobs:
             --project-name negosmint \
             .
 
-      - name: Get dependencies
-        run: flutter pub get
+      - name: Configure Git
+        run: |
+          git config user.name "NegosMint Builder"
+          git config user.email "actions@github.com"
 
-      - name: Analyze project
-        run: flutter analyze
-
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: negosmint-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Commit Flutter project
+        run: |
+          git add .
+          git commit -m "Create NegosMint Flutter project" || echo "Nothing to commit"
+          git push origin main
