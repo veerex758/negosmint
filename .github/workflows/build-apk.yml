@@ -1,5 +1,4 @@
-
-      name: Build NegosMint APK
+name: Build NegosMint APK
 
 on:
   workflow_dispatch:
