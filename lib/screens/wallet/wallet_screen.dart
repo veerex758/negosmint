@@ -80,8 +80,8 @@ class WalletScreen extends StatelessWidget {
                           fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 18),
-                    Row(
-                      children: const [
+                    const Row(
+                      children: [
                         Expanded(
                             child: _Breakdown(label: 'Available', value: 110.20)),
                         Expanded(child: _Breakdown(label: 'Pending', value: 15.25)),
@@ -122,7 +122,7 @@ class WalletScreen extends StatelessWidget {
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: _kindColor(t.kind).withOpacity(0.15),
+                          color: _kindColor(t.kind).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(_kindIcon(t.kind),
