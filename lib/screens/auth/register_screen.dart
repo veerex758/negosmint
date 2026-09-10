@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../core/widgets/app_page_route.dart';
+import '../../services/auth_service.dart';
 import '../main_nav/main_nav_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -52,17 +55,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      _success = true;
-    });
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainNavScreen()),
-    );
+    try {
+      await AuthService.instance.signUp(
+        email: _email.text.trim(),
+        password: _password.text,
+        fullName: _fullName.text.trim(),
+        username: _username.text.trim(),
+        phone: _phone.text.trim(),
+        referralCode: _referral.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _success = true;
+      });
+      await Future.delayed(const Duration(milliseconds: 700));
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(appRoute(const MainNavScreen()));
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Something went wrong. Try again.')),
+      );
+    }
   }
 
   Widget _field({

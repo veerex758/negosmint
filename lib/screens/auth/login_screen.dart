@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../core/widgets/app_page_route.dart';
+import '../../services/auth_service.dart';
 import '../main_nav/main_nav_screen.dart';
 import 'register_screen.dart';
 
@@ -31,12 +34,25 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainNavScreen()),
-    );
+    try {
+      await AuthService.instance.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(appRoute(const MainNavScreen()));
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Something went wrong. Try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _pickLanguage() {
@@ -132,14 +148,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         TextFormField(
                           controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
                           style: const TextStyle(color: AppColors.textPrimary),
                           decoration: const InputDecoration(
-                            hintText: 'Email or username',
-                            prefixIcon: Icon(Icons.person_outline,
+                            hintText: 'Email',
+                            prefixIcon: Icon(Icons.mail_outline,
                                 color: AppColors.textSecondary),
                           ),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Enter your email or username'
+                          validator: (v) => (v == null || !v.contains('@'))
+                              ? 'Enter a valid email'
                               : null,
                         ),
                         const SizedBox(height: 14),
@@ -190,10 +207,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text("Don't have an account?",
                           style: TextStyle(color: AppColors.textSecondary)),
                       TextButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const RegisterScreen()),
-                        ),
+                        onPressed: () => Navigator.of(context)
+                            .push(appRoute(const RegisterScreen())),
                         child: const Text('Create account',
                             style: TextStyle(
                                 color: AppColors.highlight,

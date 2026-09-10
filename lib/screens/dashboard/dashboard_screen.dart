@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
-import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/task_card.dart';
+import '../../core/widgets/app_page_route.dart';
+import '../notifications/notifications_screen.dart';
+import '../tasks/task_completion_screen.dart';
+import '../tasks/tasks_screen.dart';
+import '../wallet/wallet_screen.dart';
+import '../wallet/withdraw_screen.dart';
+import '../referral/referral_screen.dart';
 import 'widgets/balance_card.dart';
 import 'widgets/streak_card.dart';
 import 'widgets/quick_actions.dart';
+import 'widgets/earnings_chart.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -40,11 +47,15 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   Stack(
                     children: [
-                      const Icon(Icons.notifications_none_rounded,
-                          color: AppColors.textPrimary),
+                      IconButton(
+                        onPressed: () => Navigator.of(context)
+                            .push(appRoute(const NotificationsScreen())),
+                        icon: const Icon(Icons.notifications_none_rounded,
+                            color: AppColors.textPrimary),
+                      ),
                       Positioned(
-                        right: 0,
-                        top: 0,
+                        right: 8,
+                        top: 8,
                         child: Container(
                           width: 8,
                           height: 8,
@@ -70,8 +81,11 @@ class DashboardScreen extends StatelessWidget {
               BalanceCard(
                 balance: 125.45,
                 weeklyChangePct: 12.5,
-                onWithdraw: () {},
-                onWallet: () {},
+                onWithdraw: () => Navigator.of(context).push(
+                  appRoute(const WithdrawScreen(availableBalance: 125.45)),
+                ),
+                onWallet: () => Navigator.of(context)
+                    .push(appRoute(const WalletScreen())),
               ),
               const SizedBox(height: 20),
               const Text('Quick Actions',
@@ -80,63 +94,32 @@ class DashboardScreen extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       fontSize: 15)),
               const SizedBox(height: 12),
-              QuickActions(onSelect: (_) {}),
-              const SizedBox(height: 20),
-              GlassCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text('Earnings Overview',
-                              style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15)),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.cobalt.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text('7D',
-                              style: TextStyle(
-                                  color: AppColors.highlight, fontSize: 11)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text('\$45.80',
-                        style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 2),
-                    const Row(
-                      children: [
-                        Icon(Icons.arrow_upward,
-                            size: 13, color: AppColors.success),
-                        Text(' 12.5%',
-                            style: TextStyle(
-                                color: AppColors.success,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 90,
-                      child: CustomPaint(
-                        painter: _MiniChartPainter(),
-                        size: const Size(double.infinity, 90),
-                      ),
-                    ),
-                  ],
-                ),
+              QuickActions(
+                onSelect: (action) {
+                  switch (action) {
+                    case 'Tasks':
+                      Navigator.of(context)
+                          .push(appRoute(const TasksScreen()));
+                      break;
+                    case 'Wallet':
+                      Navigator.of(context)
+                          .push(appRoute(const WalletScreen()));
+                      break;
+                    case 'Withdraw':
+                      Navigator.of(context).push(
+                        appRoute(
+                            const WithdrawScreen(availableBalance: 125.45)),
+                      );
+                      break;
+                    case 'Refer':
+                      Navigator.of(context)
+                          .push(appRoute(const ReferralScreen()));
+                      break;
+                  }
+                },
               ),
+              const SizedBox(height: 20),
+              const EarningsChart(),
               const SizedBox(height: 20),
               const Text('Available Tasks',
                   style: TextStyle(
@@ -145,7 +128,17 @@ class DashboardScreen extends StatelessWidget {
                       fontSize: 15)),
               const SizedBox(height: 12),
               for (final t in _tasks) ...[
-                TaskCard(task: t, onStart: () {}),
+                TaskCard(
+                  task: t,
+                  onStart: () => Navigator.of(context).push(
+                    appRoute(
+                      TaskCompletionScreen(
+                        taskTitle: t.title,
+                        reward: t.reward,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 12),
               ],
             ],
@@ -154,48 +147,4 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _MiniChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final points = [0.3, 0.5, 0.35, 0.6, 0.45, 0.8, 0.7];
-    final path = Path();
-    final fillPath = Path();
-    final dx = size.width / (points.length - 1);
-
-    for (var i = 0; i < points.length; i++) {
-      final x = i * dx;
-      final y = size.height * (1 - points[i]);
-      if (i == 0) {
-        path.moveTo(x, y);
-        fillPath.moveTo(x, size.height);
-        fillPath.lineTo(x, y);
-      } else {
-        path.lineTo(x, y);
-        fillPath.lineTo(x, y);
-      }
-    }
-    fillPath.lineTo(size.width, size.height);
-    fillPath.close();
-
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [AppColors.cobalt.withValues(alpha: 0.3), AppColors.cobalt.withValues(alpha: 0)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawPath(fillPath, fillPaint);
-
-    final linePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round
-      ..shader = AppColors.brandGradient
-          .createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawPath(path, linePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

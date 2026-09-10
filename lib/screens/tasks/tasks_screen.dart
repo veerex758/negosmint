@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/task_card.dart';
+import '../../core/widgets/app_page_route.dart';
+import 'task_completion_screen.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -23,6 +25,17 @@ class _TasksScreenState extends State<TasksScreen> {
     TaskItem(title: 'Watch Short Video', category: 'Videos', reward: 0.40, minutes: 2),
     TaskItem(title: 'Sign Up Offer', category: 'Offers', reward: 4.00, minutes: 15),
   ];
+
+  void _startTask(BuildContext context, TaskItem task) {
+    Navigator.of(context).push(
+      appRoute(
+        TaskCompletionScreen(
+          taskTitle: task.title,
+          reward: task.reward,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,8 +102,10 @@ class _TasksScreenState extends State<TasksScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                   itemCount: filtered.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, i) =>
-                      TaskCard(task: filtered[i], onStart: () {}),
+                  itemBuilder: (context, i) => TaskCard(
+                    task: filtered[i],
+                    onStart: () => _startTask(context, filtered[i]),
+                  ),
                 ),
               ),
             ],

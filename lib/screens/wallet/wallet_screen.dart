@@ -4,6 +4,8 @@ import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/animated_counter.dart';
 import '../../core/widgets/primary_button.dart';
+import 'withdraw_screen.dart';
+import '../../core/widgets/app_page_route.dart';
 
 class _Txn {
   const _Txn(this.title, this.subtitle, this.amount, this.kind);
@@ -98,7 +100,14 @@ class WalletScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: PrimaryButton(label: 'Withdraw', onPressed: () {}),
+                          child: PrimaryButton(
+                            label: 'Withdraw',
+                            onPressed: () => Navigator.of(context).push(
+                              appRoute(
+                                const WithdrawScreen(availableBalance: 110.20),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),

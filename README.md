@@ -30,37 +30,52 @@ anywhere.
 All data on these screens is local placeholder state — there is no backend
 yet (see "Not included" below).
 
-## Run it
+## Backend setup (Supabase)
 
-```bash
-flutter pub get
-flutter run
-```
+1. Create a project at supabase.com.
+2. Open the SQL editor and run `supabase/schema.sql` top to bottom. It
+   creates every table, the wallet ledger view, RLS policies, and the
+   `complete_task()` / `request_withdrawal()` functions that do
+   server-side reward validation (see comments in that file for why).
+3. Grab your project's URL and anon key from Project Settings → API.
+4. Run locally with both passed in:
 
-Requires the Flutter SDK (stable channel) — this environment couldn't run
-`flutter pub get` itself (no network access), so dependency resolution and
-device testing need to happen on your machine.
+   ```bash
+   flutter pub get
+   flutter run \
+     --dart-define=SUPABASE_URL=https://xxxx.supabase.co \
+     --dart-define=SUPABASE_ANON_KEY=eyJhbGciOi...
+   ```
+
+5. For CI, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as repo secrets
+   (Settings → Secrets and variables → Actions) — `build-apk.yml` already
+   passes them through to the release build.
+
+Without these, the app still boots (splash/login/register UI all work)
+but sign-in and sign-up will show an auth error, since there's no backend
+to talk to yet.
 
 ## Not included yet (per the original phased plan)
 
-These are Phase 4–8 in the original plan and are substantial projects of
-their own — happy to build them next, one phase at a time:
-
-- Task-completion success animation (checkmark draw + coin burst), withdrawal
-  flow (amount entry → method → summary → confirmation), notifications
-  screen, level/XP system, settings sub-pages.
-- **Backend**: auth, database, task verification, and a real transaction
-  ledger (wallet balances must never live only on-device).
-- **Anti-fraud & security**: server-side reward validation, rate limiting,
-  fraud detection.
-- **Admin dashboard**: separate app/panel for managing users, tasks, and
-  withdrawals.
+- Settings sub-pages, level/XP UI, admin dashboard (the schema has the
+  data for it — `profiles.is_admin`, all the tables an admin panel would
+  query — but there's no admin UI yet).
+- Task list, wallet screen, and referral screen are still on placeholder
+  local data — the services layer (`lib/services/`) is wired up and ready,
+  they just need to be pointed at it instead of the hardcoded lists.
+- Rate limiting and bot/device fraud detection beyond what the DB
+  constraints already catch (duplicate task submissions, double-spend on
+  withdrawals).
 
 ## Structure
 
 ```
 lib/
 ├── main.dart
-├── core/{theme,widgets}
-└── screens/{splash,auth,dashboard,tasks,wallet,referral,profile,main_nav}
+├── core/{theme,widgets,config}
+├── models/          # AppProfile, WalletTransaction, TaskModel
+├── services/         # AuthService, WalletService, TaskService
+└── screens/{splash,auth,dashboard,tasks,wallet,referral,profile,main_nav,notifications}
+supabase/
+└── schema.sql        # run this in the Supabase SQL editor
 ```
