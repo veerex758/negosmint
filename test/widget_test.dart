@@ -1,17 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:negosmint/main.dart';
 
 void main() {
-  setUpAll(() {
-    // google_fonts tries to fetch font files over the network at runtime.
-    // CI test environments block network access, which throws mid-build
-    // and fails the test even when the actual assertions are correct.
-    // Disabling runtime fetching falls back to the system font instead.
-    GoogleFonts.config.allowRuntimeFetching = false;
-  });
-
   testWidgets('App boots and shows the splash screen',
       (WidgetTester tester) async {
     await tester.pumpWidget(const NegosMintApp());
@@ -20,8 +11,12 @@ void main() {
     expect(find.text('NEGOSMINT'), findsOneWidget);
 
     // The splash screen schedules a Future.delayed to auto-navigate to
-    // LoginScreen. Advance the (fake) clock past that so the test doesn't
-    // end with a pending timer, which flutter_test treats as a failure.
+    // LoginScreen. Advance the (fake) clock past that.
     await tester.pump(const Duration(milliseconds: 2500));
+
+    // LoginScreen's GlassCard schedules its own entrance-animation timer
+    // (delay: Duration.zero) as soon as it's built. Flush it so no timer
+    // is left pending when the test ends.
+    await tester.pump();
   });
 }
