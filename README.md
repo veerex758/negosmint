@@ -1,4 +1,4 @@
-# # NegosMint (Flutter)
+# NegosMint (Flutter)
 
 **Cobalt. Precision. Motion.**
 

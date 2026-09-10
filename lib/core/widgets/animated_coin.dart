@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import 'package:vector_math/vector_math.dart';
 
 /// Chrome + cobalt-center coin with slow 3D-style rotation and a soft
 /// light sweep. No neon — reflections only.
@@ -39,9 +38,10 @@ class _AnimatedCoinState extends State<AnimatedCoin>
 
         return Transform.translate(
           offset: Offset(0, floatY),
-          child: Transform(
+          child: Transform.scale(
+            scaleX: scaleX,
+            scaleY: 1.0,
             alignment: Alignment.center,
-            transform: Matrix4.identity()..scaleByVector3(Vector3(scaleX, 1.0, 1.0)),
             child: Container(
               width: widget.size,
               height: widget.size,

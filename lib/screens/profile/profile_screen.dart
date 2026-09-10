@@ -42,33 +42,35 @@ class ProfileScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Color.fromARGB(77, 49, 87, 255),
+                            color: AppColors.cobalt.withValues(alpha: 0.3),
                             blurRadius: 20,
                           ),
                         ],
                       ),
                       alignment: Alignment.center,
-                      child: Text('A',
+                      child: const Text('A',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 28,
                               fontWeight: FontWeight.w800)),
                     ),
-                    SizedBox(height: 12),
-                    Text('Alex',
+                    const SizedBox(height: 12),
+                    const Text('Alex',
                         style: TextStyle(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w700,
                             fontSize: 17)),
-                    Text('@alex123',
+                    const Text('@alex123',
                         style: TextStyle(
                             color: AppColors.textSecondary, fontSize: 13)),
-                    SizedBox(height: 18),
-                    Row(
+                    const SizedBox(height: 18),
+                    const Row(
                       children: [
                         Expanded(child: _Stat(label: 'Tasks', value: '132')),
-                        Expanded(child: _Stat(label: 'Earned', value: '\$482')),
-                        Expanded(child: _Stat(label: 'Referrals', value: '18')),
+                        Expanded(
+                            child: _Stat(label: 'Earned', value: '\$482')),
+                        Expanded(
+                            child: _Stat(label: 'Referrals', value: '18')),
                         Expanded(child: _Stat(label: 'Streak', value: '7')),
                       ],
                     ),
