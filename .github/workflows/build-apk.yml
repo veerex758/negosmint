@@ -1,41 +1,30 @@
-name: Setup NegosMint Flutter Project
+name: Build APK
 
 on:
-  workflow_dispatch:
-
-permissions:
-  contents: write
+workflow_dispatch:
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
+build:
+runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
+  - name: Setup Flutter
+    uses: subosito/flutter-action@v2
+    with:
+      channel: stable
+      cache: true
 
-      - name: Create Flutter project
-        run: |
-          flutter create \
-            --org com.negosmint \
-            --project-name negosmint \
-            .
+  - name: Get dependencies
+    run: flutter pub get
 
-      - name: Configure Git
-        run: |
-          git config user.name "NegosMint Builder"
-          git config user.email "actions@github.com"
+  - name: Build APK
+    run: flutter build apk --release
 
-      - name: Commit Flutter project
-        run: |
-          git add .
-          git commit -m "Create NegosMint Flutter project" || echo "Nothing to commit"
-          git push origin HEAD:main
+  - name: Upload APK
+    uses: actions/upload-artifact@v4
+    with:
+      name: negosmint-apk
+      path: build/app/outputs/flutter-apk/app-release.apk
