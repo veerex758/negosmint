@@ -40,7 +40,7 @@ class _AnimatedCoinState extends State<AnimatedCoin>
           offset: Offset(0, floatY),
           child: Transform(
             alignment: Alignment.center,
-            transform: Matrix4.identity()..scale(scaleX, 1.0),
+            transform: Matrix4.identity()..scaleByVector3(Vector3(scaleX, 1.0, 1.0)),
             child: Container(
               width: widget.size,
               height: widget.size,
@@ -59,13 +59,13 @@ class _AnimatedCoinState extends State<AnimatedCoin>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.cobalt.withOpacity(0.25),
+                    color: AppColors.cobalt.withValues(alpha: 0.25),
                     blurRadius: 24,
                     spreadRadius: -4,
                   ),
                 ],
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.35),
+                  color: Colors.white.withValues(alpha: 0.35),
                   width: 1.2,
                 ),
               ),
@@ -75,7 +75,7 @@ class _AnimatedCoinState extends State<AnimatedCoin>
                 style: TextStyle(
                   fontSize: widget.size * 0.28,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.background.withOpacity(0.85),
+                  color: AppColors.background.withValues(alpha: 0.85),
                   letterSpacing: 0.5,
                 ),
               ),
