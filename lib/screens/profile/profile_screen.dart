@@ -31,7 +31,7 @@ class ProfileScreen extends StatelessWidget {
                       fontSize: 22,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 20),
-              GlassCard(
+              const GlassCard(
                 child: Column(
                   children: [
                     Container(
@@ -42,30 +42,30 @@ class ProfileScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.cobalt.withOpacity(0.3),
+                            color: Color.fromARGB(77, 49, 87, 255),
                             blurRadius: 20,
                           ),
                         ],
                       ),
                       alignment: Alignment.center,
-                      child: const Text('A',
+                      child: Text('A',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 28,
                               fontWeight: FontWeight.w800)),
                     ),
-                    const SizedBox(height: 12),
-                    const Text('Alex',
+                    SizedBox(height: 12),
+                    Text('Alex',
                         style: TextStyle(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w700,
                             fontSize: 17)),
-                    const Text('@alex123',
+                    Text('@alex123',
                         style: TextStyle(
                             color: AppColors.textSecondary, fontSize: 13)),
-                    const SizedBox(height: 18),
+                    SizedBox(height: 18),
                     Row(
-                      children: const [
+                      children: [
                         Expanded(child: _Stat(label: 'Tasks', value: '132')),
                         Expanded(child: _Stat(label: 'Earned', value: '\$482')),
                         Expanded(child: _Stat(label: 'Referrals', value: '18')),
