@@ -199,7 +199,7 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
           height: p.size,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(
+            gradient:  LinearGradient(
               colors: [AppColors.highlight, AppColors.cobalt],
             ),
           ),
