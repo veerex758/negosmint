@@ -59,7 +59,7 @@ class ReferralScreen extends StatelessWidget {
                                     letterSpacing: 1.2,
                                     fontSize: 15)),
                           ),
-                          const Icon(Icons.copy_rounded,
+                           Icon(Icons.copy_rounded,
                               size: 18, color: AppColors.textSecondary),
                         ],
                       ),
