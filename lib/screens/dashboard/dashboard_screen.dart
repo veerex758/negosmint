@@ -99,7 +99,7 @@ class DashboardScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.cobalt.withOpacity(0.15),
+                            color: AppColors.cobalt.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text('7D',
@@ -115,8 +115,8 @@ class DashboardScreen extends StatelessWidget {
                             fontSize: 24,
                             fontWeight: FontWeight.w800)),
                     const SizedBox(height: 2),
-                    Row(
-                      children: const [
+                    const Row(
+                      children: [
                         Icon(Icons.arrow_upward,
                             size: 13, color: AppColors.success),
                         Text(' 12.5%',
@@ -183,7 +183,7 @@ class _MiniChartPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [AppColors.cobalt.withOpacity(0.3), AppColors.cobalt.withOpacity(0)],
+        colors: [AppColors.cobalt.withValues(alpha: 0.3), AppColors.cobalt.withValues(alpha: 0)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawPath(fillPath, fillPaint);
 
