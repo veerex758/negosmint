@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'package:vector_math/vector_math.dart';
 
 /// Chrome + cobalt-center coin with slow 3D-style rotation and a soft
 /// light sweep. No neon — reflections only.
