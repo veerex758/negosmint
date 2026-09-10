@@ -51,7 +51,7 @@ class ReferralScreen extends StatelessWidget {
                       ),
                       child: const Row(
                         children: [
-                          const Expanded(
+                            Expanded(
                             child: Text(_code,
                                 style: TextStyle(
                                     color: AppColors.highlight,
