@@ -1,35 +1,43 @@
 name: Build APK
 
 on:
-  workflow_dispatch:  # Change to 'push' if you want automatic builds on every commit
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build release APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: '3.24.5'
+          flutter-version: 3.47.3
           cache: true
-          cache-dependency-path: pubspec.lock
-          gradle: wrapper   # This forces the project Gradle wrapper and fixes the QName error
 
-      - name: Get dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release --no-pub
+      - name: Analyze
+        run: flutter analyze
 
-      - name: Upload APK
+      - name: Run tests
+        run: flutter test
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: negosmint-apk
+          name: negosmint-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-          overwrite: true
+          retention-days: 14
