@@ -42,7 +42,7 @@ class AppColors {
 
   static RadialGradient glowGradient(Color color, {double opacity = 0.35}) {
     return RadialGradient(
-      colors: [color.withOpacity(opacity), color.withOpacity(0)],
+      colors: [color.withValues(alpha: opacity), color.withValues(alpha: 0)],
     );
   }
 }
