@@ -31,7 +31,7 @@ class ProfileScreen extends StatelessWidget {
                       fontSize: 22,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 20),
-              const GlassCard(
+              GlassCard(
                 child: Column(
                   children: [
                     Container(
