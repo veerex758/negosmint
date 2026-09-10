@@ -45,13 +45,13 @@ class ReferralScreen extends StatelessWidget {
                       padding:
                           const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
-                        color: AppColors.background.withOpacity(0.5),
+                        color: AppColors.background.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: AppColors.glassBorder),
                       ),
-                      child: Row(
+                      child: const Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(_code,
                                 style: TextStyle(
                                     color: AppColors.highlight,
@@ -59,7 +59,7 @@ class ReferralScreen extends StatelessWidget {
                                     letterSpacing: 1.2,
                                     fontSize: 15)),
                           ),
-                          const Icon(Icons.copy_rounded,
+                          Icon(Icons.copy_rounded,
                               size: 18, color: AppColors.textSecondary),
                         ],
                       ),
@@ -86,8 +86,8 @@ class ReferralScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Expanded(
                       child: _StatCard(label: 'Total Referrals', value: '18')),
                   SizedBox(width: 12),
