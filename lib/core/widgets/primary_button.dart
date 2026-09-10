@@ -58,7 +58,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                 : [
                     BoxShadow(
                       color: AppColors.cobalt
-                          .withOpacity(_pressed ? 0.45 : 0.28),
+                          .withValues(alpha: _pressed ? 0.45 : 0.28),
                       blurRadius: _pressed ? 26 : 18,
                       spreadRadius: _pressed ? 1 : 0,
                     ),
