@@ -69,7 +69,7 @@ class TaskCard extends StatelessWidget {
                 child: TextButton(
                   onPressed: onStart,
                   style: TextButton.styleFrom(
-                    backgroundColor: AppColors.cobalt.withOpacity(0.15),
+                    backgroundColor: AppColors.cobalt.withValues(alpha: 0.15),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
