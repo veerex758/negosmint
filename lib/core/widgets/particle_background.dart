@@ -100,7 +100,7 @@ class _ParticlePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AppColors.highlight.withOpacity(0.35);
+    final paint = Paint()..color = AppColors.highlight.withValues(alpha: 0.35);
     for (final p in particles) {
       final y = (p.dy + sin(t * 2 * pi + p.phase) * 0.02) % 1.0;
       final x = (p.dx + p.speed * t) % 1.0;
