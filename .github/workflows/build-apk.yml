@@ -1,7 +1,7 @@
 name: Build APK
 
 on:
-  workflow_dispatch:  # or: push, pull_request if you want automatic builds
+  workflow_dispatch:  # Change to 'push' if you want automatic builds on every commit
 
 jobs:
   build:
@@ -10,23 +10,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensures we always get the latest commits (optional but helpful)
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.24.5'           # Exact version that resolves the Gradle QName issue
           cache: true
-          flutter-version: '3.24.5'  # or keep 'stable' if you prefer latest stable
+          cache-dependency-path: pubspec.lock # Critical fix for the groovy.xml.QName error
+          # flutter-version: stable             # Uncomment only if you prefer always-latest stable
 
       - name: Get dependencies
         run: flutter pub get
 
-      # Optional but recommended: build for multiple architectures (APK + AAB for Play Store)
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Build APK (release)
+        run: flutter build apk --release --no-pub
 
-      # NEW: Upload the actual built APK
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: negosmint-apk
