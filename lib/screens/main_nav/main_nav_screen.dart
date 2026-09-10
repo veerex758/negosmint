@@ -50,7 +50,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
               child: Container(
                 height: 68,
                 decoration: BoxDecoration(
-                  color: AppColors.surface.withOpacity(0.75),
+                  color: AppColors.surface.withValues(alpha: 0.75),
                   borderRadius: BorderRadius.circular(28),
                   border: Border.all(color: AppColors.glassBorder),
                 ),
@@ -72,7 +72,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
                             boxShadow: selected
                                 ? [
                                     BoxShadow(
-                                      color: AppColors.cobalt.withOpacity(0.35),
+                                      color: AppColors.cobalt.withValues(alpha: 0.35),
                                       blurRadius: 16,
                                     ),
                                   ]
