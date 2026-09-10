@@ -90,7 +90,7 @@ class _GlassCardState extends State<GlassCard>
                   border: Border.all(color: AppColors.glassBorder),
                   boxShadow: [
                     BoxShadow(
-                      color: glow.withOpacity(_pressed ? 0.22 : 0.12),
+                      color: glow.withValues(alpha: _pressed ? 0.22 : 0.12),
                       blurRadius: 30,
                       spreadRadius: -6,
                     ),
@@ -103,7 +103,7 @@ class _GlassCardState extends State<GlassCard>
                     child: Container(
                       padding: widget.padding,
                       decoration: BoxDecoration(
-                        color: AppColors.surface.withOpacity(0.55),
+                        color: AppColors.surface.withValues(alpha: 0.55),
                         borderRadius:
                             BorderRadius.circular(widget.borderRadius),
                       ),
