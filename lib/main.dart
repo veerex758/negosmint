@@ -15,7 +15,9 @@ Future<void> main() async {
   if (SupabaseConfig.isConfigured) {
     await Supabase.initialize(
       url: SupabaseConfig.url,
-      anonKey: SupabaseConfig.anonKey,
+      // supabase_flutter renamed `anonKey` to `publishableKey` to match
+      // Supabase's newer API key naming — same value, new parameter name.
+      publishableKey: SupabaseConfig.anonKey,
     );
   }
 

@@ -197,9 +197,9 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
         child: Container(
           width: p.size,
           height: p.size,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppColors.highlight, AppColors.cobalt],
             ),
           ),

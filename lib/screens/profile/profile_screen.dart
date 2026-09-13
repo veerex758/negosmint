@@ -9,6 +9,7 @@ import '../../services/task_service.dart';
 import '../../services/referral_service.dart';
 import '../../models/app_profile.dart';
 import '../../models/referral_stats.dart';
+import '../../models/wallet_transaction.dart';
 import '../auth/login_screen.dart';
 
 typedef _ProfileData = ({
