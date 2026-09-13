@@ -14,9 +14,9 @@ Future<void> main() async {
   // just get an auth error when a network call is actually attempted.
   if (SupabaseConfig.isConfigured) {
     await Supabase.initialize(
-  url: SupabaseConfig.url,
-  publishableKey: SupabaseConfig.publishableKey,
-);
+      url: SupabaseConfig.url,
+      anonKey: SupabaseConfig.anonKey,
+    );
   }
 
   runApp(const NegosMintApp());

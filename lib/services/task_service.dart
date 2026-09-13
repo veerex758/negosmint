@@ -39,4 +39,13 @@ class TaskService {
       'p_submission_id': submissionId,
     });
   }
+
+  Future<int> fetchCompletedCount(String userId) async {
+    final rows = await supabase
+        .from('task_submissions')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+    return (rows as List).length;
+  }
 }

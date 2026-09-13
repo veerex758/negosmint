@@ -3,13 +3,14 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/animated_counter.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/wallet_service.dart';
 
-class _Period {
-  const _Period(this.label, this.total, this.changePct, this.points);
+class _PeriodConfig {
+  const _PeriodConfig(this.label, this.days, this.buckets);
   final String label;
-  final double total;
-  final double changePct;
-  final List<double> points;
+  final int days;
+  final int buckets;
 }
 
 class EarningsChart extends StatefulWidget {
@@ -23,17 +24,45 @@ class _EarningsChartState extends State<EarningsChart> {
   int _index = 0;
 
   static const _periods = [
-    _Period('7D', 45.80, 12.5, [4, 6, 5, 9, 7, 12, 10]),
-    _Period('1M', 182.40, 8.2, [10, 14, 9, 18, 15, 22, 19, 25, 20, 28, 24, 30]),
-    _Period('3M', 520.10, 22.4, [30, 45, 38, 60, 52, 70, 64, 80]),
-    _Period('1Y', 2140.75, 34.1, [120, 160, 140, 210, 190, 260, 230, 300, 270, 330, 300, 360]),
+    _PeriodConfig('7D', 7, 7),
+    _PeriodConfig('1M', 30, 10),
+    _PeriodConfig('3M', 90, 9),
+    _PeriodConfig('1Y', 365, 12),
   ];
+
+  final Map<int, Future<EarningsSeries>> _cache = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch(0);
+  }
+
+  void _fetch(int index) {
+    final userId = AuthService.instance.currentUser?.id;
+    if (userId == null) {
+      _cache[index] = Future.value(EarningsSeries.zero);
+      return;
+    }
+    final config = _periods[index];
+    _cache[index] = WalletService.instance.fetchEarningsSeries(
+      userId,
+      days: config.days,
+      buckets: config.buckets,
+    );
+  }
+
+  void _selectPeriod(int index) {
+    setState(() {
+      _index = index;
+      if (!_cache.containsKey(index)) {
+        _fetch(index);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final period = _periods[_index];
-    final up = period.changePct >= 0;
-
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +80,7 @@ class _EarningsChartState extends State<EarningsChart> {
                 children: [
                   for (var i = 0; i < _periods.length; i++)
                     GestureDetector(
-                      onTap: () => setState(() => _index = i),
+                      onTap: () => _selectPeriod(i),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         margin: const EdgeInsets.only(left: 6),
@@ -80,78 +109,126 @@ class _EarningsChartState extends State<EarningsChart> {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          AnimatedCounter(
-            value: period.total,
-            style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 24,
-                fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Icon(up ? Icons.arrow_upward : Icons.arrow_downward,
-                  size: 13, color: up ? AppColors.success : AppColors.danger),
-              Text(' ${period.changePct.abs().toStringAsFixed(1)}%',
-                  style: TextStyle(
-                      color: up ? AppColors.success : AppColors.danger,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 110,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 350),
-              child: LineChart(
-                LineChartData(
-                  gridData: const FlGridData(show: false),
-                  titlesData: const FlTitlesData(show: false),
-                  borderData: FlBorderData(show: false),
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipColor: (_) => AppColors.surfaceElevated,
-                      getTooltipItems: (spots) => spots
-                          .map((s) => LineTooltipItem(
-                                '\$${s.y.toStringAsFixed(0)}',
-                                const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600),
-                              ))
-                          .toList(),
-                    ),
-                  ),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: [
-                        for (var i = 0; i < period.points.length; i++)
-                          FlSpot(i.toDouble(), period.points[i]),
-                      ],
-                      isCurved: true,
-                      gradient: AppColors.brandGradient,
-                      barWidth: 2.6,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppColors.cobalt.withValues(alpha: 0.25),
-                            AppColors.cobalt.withValues(alpha: 0),
-                          ],
+          const SizedBox(height: 12),
+          FutureBuilder<EarningsSeries>(
+            future: _cache[_index],
+            builder: (context, snapshot) {
+              final series = snapshot.data ?? EarningsSeries.zero;
+              final loading =
+                  snapshot.connectionState == ConnectionState.waiting;
+              final up = series.changePct >= 0;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  loading
+                      ? const SizedBox(
+                          height: 28,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(
+                                    AppColors.highlight),
+                              ),
+                            ),
+                          ),
+                        )
+                      : AnimatedCounter(
+                          value: series.total,
+                          style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                key: ValueKey(_index),
-                duration: const Duration(milliseconds: 400),
-              ),
-            ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(up ? Icons.arrow_upward : Icons.arrow_downward,
+                          size: 13,
+                          color: up ? AppColors.success : AppColors.danger),
+                      Text(' ${series.changePct.abs().toStringAsFixed(1)}%',
+                          style: TextStyle(
+                              color: up ? AppColors.success : AppColors.danger,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 110,
+                    child: series.points.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No earnings in this period yet.',
+                              style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12),
+                            ),
+                          )
+                        : AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 350),
+                            child: LineChart(
+                              LineChartData(
+                                gridData: const FlGridData(show: false),
+                                titlesData: const FlTitlesData(show: false),
+                                borderData: FlBorderData(show: false),
+                                lineTouchData: LineTouchData(
+                                  touchTooltipData: LineTouchTooltipData(
+                                    getTooltipColor: (_) =>
+                                        AppColors.surfaceElevated,
+                                    getTooltipItems: (spots) => spots
+                                        .map((s) => LineTooltipItem(
+                                              '\$${s.y.toStringAsFixed(0)}',
+                                              const TextStyle(
+                                                  color:
+                                                      AppColors.textPrimary,
+                                                  fontSize: 11,
+                                                  fontWeight:
+                                                      FontWeight.w600),
+                                            ))
+                                        .toList(),
+                                  ),
+                                ),
+                                lineBarsData: [
+                                  LineChartBarData(
+                                    spots: [
+                                      for (var i = 0;
+                                          i < series.points.length;
+                                          i++)
+                                        FlSpot(i.toDouble(), series.points[i]),
+                                    ],
+                                    isCurved: true,
+                                    gradient: AppColors.brandGradient,
+                                    barWidth: 2.6,
+                                    dotData: const FlDotData(show: false),
+                                    belowBarData: BarAreaData(
+                                      show: true,
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          AppColors.cobalt
+                                              .withValues(alpha: 0.25),
+                                          AppColors.cobalt
+                                              .withValues(alpha: 0),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              key: ValueKey(_index),
+                              duration: const Duration(milliseconds: 400),
+                            ),
+                          ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

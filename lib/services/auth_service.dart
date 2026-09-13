@@ -55,4 +55,15 @@ class AuthService {
         .maybeSingle();
     return row == null ? null : AppProfile.fromMap(row);
   }
+
+  /// Current daily-completion streak, from the `streaks` table. Small
+  /// enough that it doesn't warrant its own service file.
+  Future<int> fetchStreak(String userId) async {
+    final row = await supabase
+        .from('streaks')
+        .select('current_streak')
+        .eq('user_id', userId)
+        .maybeSingle();
+    return (row?['current_streak'] as int?) ?? 0;
+  }
 }

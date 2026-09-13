@@ -51,11 +51,85 @@ class WalletService {
     required double fee,
     required String method,
   }) async {
-    final withdrawalId = await supabase.rpc('request_withdrawal', params: {
+    final transactionRef = await supabase.rpc('request_withdrawal', params: {
       'p_amount': amount,
       'p_fee': fee,
       'p_method': method,
     });
-    return withdrawalId as String;
+    return transactionRef as String;
   }
+
+  /// Real earnings for a chart period: buckets completed, positive
+  /// (task/referral reward) transactions into `buckets` equal time
+  /// slices over the last `days`, and computes % change against the
+  /// immediately preceding period of the same length — e.g. this week
+  /// vs last week for a 7-day window.
+  Future<EarningsSeries> fetchEarningsSeries(
+    String userId, {
+    required int days,
+    required int buckets,
+  }) async {
+    final now = DateTime.now();
+    final periodStart = now.subtract(Duration(days: days));
+    final previousStart = now.subtract(Duration(days: days * 2));
+
+    final rows = await supabase
+        .from('transactions')
+        .select('amount, created_at')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .gt('amount', 0)
+        .gte('created_at', previousStart.toIso8601String())
+        .order('created_at');
+
+    final bucketTotals = List<double>.filled(buckets, 0);
+    final bucketWidth = Duration(
+      microseconds: Duration(days: days).inMicroseconds ~/ buckets,
+    );
+
+    var currentTotal = 0.0;
+    var previousTotal = 0.0;
+
+    for (final row in rows as List) {
+      final map = row as Map<String, dynamic>;
+      final amount = (map['amount'] as num).toDouble();
+      final createdAt = DateTime.parse(map['created_at'] as String);
+
+      if (createdAt.isBefore(periodStart)) {
+        previousTotal += amount;
+        continue;
+      }
+
+      currentTotal += amount;
+      final elapsed = createdAt.difference(periodStart);
+      var bucketIndex = elapsed.inMicroseconds ~/ bucketWidth.inMicroseconds;
+      if (bucketIndex >= buckets) bucketIndex = buckets - 1;
+      if (bucketIndex < 0) bucketIndex = 0;
+      bucketTotals[bucketIndex] += amount;
+    }
+
+    final changePct = previousTotal == 0
+        ? (currentTotal > 0 ? 100.0 : 0.0)
+        : ((currentTotal - previousTotal) / previousTotal) * 100;
+
+    return EarningsSeries(
+      total: currentTotal,
+      changePct: changePct,
+      points: bucketTotals,
+    );
+  }
+}
+
+class EarningsSeries {
+  const EarningsSeries({
+    required this.total,
+    required this.changePct,
+    required this.points,
+  });
+
+  final double total;
+  final double changePct; // vs the immediately preceding equal-length period
+  final List<double> points; // for the chart line
+
+  static const zero = EarningsSeries(total: 0, changePct: 0, points: []);
 }

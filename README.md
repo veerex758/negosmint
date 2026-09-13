@@ -60,12 +60,20 @@ to talk to yet.
 - Settings sub-pages, level/XP UI, admin dashboard (the schema has the
   data for it — `profiles.is_admin`, all the tables an admin panel would
   query — but there's no admin UI yet).
-- Task list, wallet screen, and referral screen are still on placeholder
-  local data — the services layer (`lib/services/`) is wired up and ready,
-  they just need to be pointed at it instead of the hardcoded lists.
+- Deposits (button shows a "coming soon" message — there's no deposit
+  flow or payment provider integration yet).
+- Sharing a referral code (button shows a message for now — needs a
+  share plugin like `share_plus`, not added to keep dependencies minimal
+  until you ask for it).
 - Rate limiting and bot/device fraud detection beyond what the DB
   constraints already catch (duplicate task submissions, double-spend on
-  withdrawals).
+  withdrawals, double-crediting a reward).
+
+Everything else — sign up, sign in, browsing/starting/completing tasks,
+wallet balance and history, withdrawals, referral code and stats,
+notifications, profile stats, logout, the dashboard's weekly change %,
+and the earnings chart's 7D/1M/3M/1Y series — is wired to Supabase for
+real once you've run the schema and set your credentials.
 
 ## Structure
 

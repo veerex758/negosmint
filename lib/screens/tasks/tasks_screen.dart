@@ -3,6 +3,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/task_card.dart';
 import '../../core/widgets/app_page_route.dart';
+import '../../services/auth_service.dart';
+import '../../services/task_service.dart';
 import 'task_completion_screen.dart';
 
 class TasksScreen extends StatefulWidget {
@@ -18,31 +20,70 @@ class _TasksScreenState extends State<TasksScreen> {
   ];
   String _selected = 'All';
 
-  final _tasks = const [
-    TaskItem(title: 'Complete Survey', category: 'Surveys', reward: 1.50, minutes: 5),
-    TaskItem(title: 'Install & Try App', category: 'Apps', reward: 2.25, minutes: 10),
-    TaskItem(title: 'Follow & Share', category: 'Social', reward: 0.75, minutes: 3),
-    TaskItem(title: 'Watch Short Video', category: 'Videos', reward: 0.40, minutes: 2),
-    TaskItem(title: 'Sign Up Offer', category: 'Offers', reward: 4.00, minutes: 15),
-  ];
+  late Future<List<TaskItem>> _tasksFuture;
+  String? _busyTaskId;
 
-  void _startTask(BuildContext context, TaskItem task) {
-    Navigator.of(context).push(
-      appRoute(
-        TaskCompletionScreen(
-          taskTitle: task.title,
-          reward: task.reward,
+  @override
+  void initState() {
+    super.initState();
+    _tasksFuture = _loadTasks();
+  }
+
+  Future<List<TaskItem>> _loadTasks() async {
+    final models = await TaskService.instance.fetchTasks(category: _selected);
+    return models.map(TaskItem.fromModel).toList();
+  }
+
+  void _reload() {
+    setState(() => _tasksFuture = _loadTasks());
+  }
+
+  Future<void> _startTask(TaskItem task) async {
+    if (task.id == null) return; // demo task with no backend id
+    if (!AuthService.instance.isSignedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to start a task.')),
+      );
+      return;
+    }
+
+    setState(() => _busyTaskId = task.id);
+    try {
+      // Starting and completing back-to-back stands in for whatever the
+      // real task actually involves (watching a video, filling a survey,
+      // etc.) — the reward itself is credited server-side by
+      // complete_task(), never by this client directly.
+      final submissionId = await TaskService.instance.startTask(task.id!);
+      await TaskService.instance.completeTask(submissionId);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        appRoute(
+          TaskCompletionScreen(taskTitle: task.title, reward: task.reward),
         ),
-      ),
-    );
+      );
+      if (!mounted) return;
+      _reload(); // this task now has a submission, so it may drop out of
+      // the "available" list depending on how your task list query is set
+      // up — refetching keeps the UI honest either way.
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_friendlyError(e))),
+      );
+    } finally {
+      if (mounted) setState(() => _busyTaskId = null);
+    }
+  }
+
+  String _friendlyError(Object e) {
+    final msg = e.toString();
+    if (msg.contains('already completed')) return 'You already completed this task.';
+    if (msg.contains('duplicate key')) return 'You already started this task.';
+    return 'Something went wrong. Try again.';
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _selected == 'All'
-        ? _tasks
-        : _tasks.where((t) => t.category == _selected).toList();
-
     return Scaffold(
       body: ParticleBackground(
         child: SafeArea(
@@ -68,7 +109,10 @@ class _TasksScreenState extends State<TasksScreen> {
                     final cat = _categories[i];
                     final selected = cat == _selected;
                     return GestureDetector(
-                      onTap: () => setState(() => _selected = cat),
+                      onTap: () {
+                        setState(() => _selected = cat);
+                        _reload();
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -98,18 +142,90 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, i) => TaskCard(
-                    task: filtered[i],
-                    onStart: () => _startTask(context, filtered[i]),
-                  ),
+                child: FutureBuilder<List<TaskItem>>(
+                  future: _tasksFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.highlight,
+                        ),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return _ErrorState(onRetry: _reload);
+                    }
+                    final tasks = snapshot.data ?? const [];
+                    if (tasks.isEmpty) {
+                      return const _EmptyState();
+                    }
+                    return RefreshIndicator(
+                      onRefresh: () async => _reload(),
+                      color: AppColors.highlight,
+                      backgroundColor: AppColors.surface,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+                        itemCount: tasks.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, i) => TaskCard(
+                          task: tasks[i],
+                          busy: _busyTaskId == tasks[i].id,
+                          onStart: () => _startTask(tasks[i]),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Text(
+          'No tasks in this category right now — check back soon.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Couldn't load tasks.",
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: onRetry,
+              child: const Text('Retry',
+                  style: TextStyle(color: AppColors.highlight)),
+            ),
+          ],
         ),
       ),
     );

@@ -220,12 +220,14 @@ create policy "Users can view their own withdrawals"
 -- ---------------------------------------------------------------------------
 -- request_withdrawal(): checks available balance server-side (never trust
 -- the client's number) and atomically debits the ledger with a 'pending'
--- transaction in the same transaction as the withdrawal row.
+-- transaction in the same transaction as the withdrawal row. Returns the
+-- human-readable transaction_ref (e.g. "NM-3F9A2B1C4D") for display —
+-- not the internal uuid.
 -- ---------------------------------------------------------------------------
 create or replace function public.request_withdrawal(
   p_amount numeric, p_fee numeric, p_method text
 )
-returns uuid
+returns text
 language plpgsql
 security definer
 set search_path = public
@@ -255,7 +257,13 @@ begin
     'Withdrawal via ' || p_method, 'withdrawals', v_withdrawal_id
   );
 
-  return v_withdrawal_id;
+  insert into public.notifications (user_id, type, title, body)
+  values (
+    auth.uid(), 'withdrawal_update', 'Withdrawal Update',
+    'Your withdrawal of $' || p_amount || ' is processing.'
+  );
+
+  return v_ref;
 end;
 $$;
 
@@ -369,6 +377,12 @@ begin
 
     insert into public.transactions (user_id, type, status, amount, description)
     values (v_referred_by, 'referral_reward', 'completed', 2.50, 'Referral reward: new signup');
+
+    insert into public.notifications (user_id, type, title, body)
+    values (
+      v_referred_by, 'referral_reward', 'Referral Reward',
+      'You earned a referral reward from a new signup.'
+    );
   end if;
 
   return new;

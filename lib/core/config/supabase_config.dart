@@ -1,30 +1,33 @@
-/// Supabase configuration for NegosMint.
+/// Supabase project credentials.
 ///
-/// Values are supplied at build/run time using --dart-define.
+/// The anon key is safe to ship in a client app by design (it only grants
+/// what your Row Level Security policies allow) — but it still shouldn't
+/// be hardcoded into source control, since that makes it awkward to use
+/// different projects for dev/staging/prod. Pass both values at build/run
+/// time instead:
 ///
-/// Example:
-/// flutter run --dart-define=SUPABASE_URL=your_url \
-/// --dart-define=SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+///   flutter run \
+///     --dart-define=SUPABASE_URL=https://xxxx.supabase.co \
+///     --dart-define=SUPABASE_ANON_KEY=eyJhbGciOi...
+///
+/// For CI (GitHub Actions), add them as repo secrets and pass the same
+/// flags in your build-apk.yml step, e.g.:
+///
+///   flutter build apk --release \
+///     --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+///     --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 class SupabaseConfig {
   SupabaseConfig._();
 
-  /// Your Supabase project URL.
   static const String url = String.fromEnvironment(
     'SUPABASE_URL',
     defaultValue: '',
   );
 
-  /// Your Supabase publishable key.
-  ///
-  /// This replaces the deprecated `anonKey` parameter.
-  static const String publishableKey = String.fromEnvironment(
-    'SUPABASE_PUBLISHABLE_KEY',
+  static const String anonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
     defaultValue: '',
   );
 
-  /// Returns true only when both required Supabase
-  /// configuration values have been provided.
-  static bool get isConfigured {
-    return url.isNotEmpty && publishableKey.isNotEmpty;
-  }
+  static bool get isConfigured => url.isNotEmpty && anonKey.isNotEmpty;
 }

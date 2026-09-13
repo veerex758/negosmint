@@ -1,104 +1,188 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../services/auth_service.dart';
+import '../../services/referral_service.dart';
+import '../../models/app_profile.dart';
+import '../../models/referral_stats.dart';
 
-class ReferralScreen extends StatelessWidget {
+typedef _ReferralData = ({AppProfile profile, ReferralStats stats});
+
+class ReferralScreen extends StatefulWidget {
   const ReferralScreen({super.key});
 
-  static const _code = 'NM-ALEX-7F2K';
+  @override
+  State<ReferralScreen> createState() => _ReferralScreenState();
+}
+
+class _ReferralScreenState extends State<ReferralScreen> {
+  Future<_ReferralData>? _dataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _dataFuture = _load();
+  }
+
+  Future<_ReferralData>? _load() {
+    final userId = AuthService.instance.currentUser?.id;
+    if (userId == null) return null;
+    return () async {
+      final profile = await AuthService.instance.fetchCurrentProfile();
+      final stats = await ReferralService.instance.fetchStats(userId);
+      if (profile == null) throw Exception('Profile not found');
+      return (profile: profile, stats: stats);
+    }();
+  }
+
+  void _copyCode(String code) {
+    Clipboard.setData(ClipboardData(text: code));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Referral code copied.')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ParticleBackground(
         child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
-            children: [
-              const Text('Referrals',
-                  style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(height: 16),
-              GlassCard(
-                glowColor: AppColors.violet,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ShaderMask(
-                      shaderCallback: (b) =>
-                          AppColors.brandGradient.createShader(b),
-                      child: const Text(
-                        'Invite Friends\nEarn More',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            height: 1.2,
-                            fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: AppColors.background.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.glassBorder),
-                      ),
-                      child: const Row(
-                        children: [
-                           Expanded(
-                            child: Text(_code,
-                                style: TextStyle(
-                                    color: AppColors.highlight,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.2,
-                                    fontSize: 15)),
-                          ),
-                           Icon(Icons.copy_rounded,
-                              size: 18, color: AppColors.textSecondary),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: PrimaryButton(
-                              label: 'Copy Code',
-                              outlined: true,
-                              onPressed: () {}),
+          child: _dataFuture == null
+              ? const _SignedOutState()
+              : FutureBuilder<_ReferralData>(
+                  future: _dataFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.highlight),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: TextButton(
+                          onPressed: () => setState(() => _dataFuture = _load()),
+                          child: const Text("Couldn't load referrals — Retry",
+                              style: TextStyle(color: AppColors.highlight)),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: PrimaryButton(
-                              label: 'Share',
-                              icon: Icons.share_rounded,
-                              onPressed: () {}),
+                      );
+                    }
+                    final data = snapshot.data!;
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+                      children: [
+                        const Text('Referrals',
+                            style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 16),
+                        GlassCard(
+                          glowColor: AppColors.violet,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ShaderMask(
+                                shaderCallback: (b) =>
+                                    AppColors.brandGradient.createShader(b),
+                                child: const Text(
+                                  'Invite Friends\nEarn More',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      height: 1.2,
+                                      fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color:
+                                      AppColors.background.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border:
+                                      Border.all(color: AppColors.glassBorder),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(data.profile.referralCode,
+                                          style: const TextStyle(
+                                              color: AppColors.highlight,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 1.2,
+                                              fontSize: 15)),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () =>
+                                          _copyCode(data.profile.referralCode),
+                                      child: const Icon(Icons.copy_rounded,
+                                          size: 18,
+                                          color: AppColors.textSecondary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: PrimaryButton(
+                                      label: 'Copy Code',
+                                      outlined: true,
+                                      onPressed: () =>
+                                          _copyCode(data.profile.referralCode),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: PrimaryButton(
+                                      label: 'Share',
+                                      icon: Icons.share_rounded,
+                                      onPressed: () {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Sharing is coming soon — copy your code for now.'),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _StatCard(
+                                label: 'Total Referrals',
+                                value: '${data.stats.totalReferrals}',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _StatCard(
+                                label: 'Referral Earnings',
+                                value:
+                                    '\$${data.stats.totalEarnings.toStringAsFixed(2)}',
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Row(
-                children: [
-                  Expanded(
-                      child: _StatCard(label: 'Total Referrals', value: '18')),
-                  SizedBox(width: 12),
-                  Expanded(
-                      child: _StatCard(label: 'Active Referrals', value: '11')),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const _StatCard(label: 'Referral Earnings', value: '\$54.20'),
-            ],
-          ),
         ),
       ),
     );
@@ -127,6 +211,23 @@ class _StatCard extends StatelessWidget {
                   fontSize: 20,
                   fontWeight: FontWeight.w800)),
         ],
+      ),
+    );
+  }
+}
+
+class _SignedOutState extends StatelessWidget {
+  const _SignedOutState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: Text(
+          'Sign in to view your referrals.',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+        ),
       ),
     );
   }

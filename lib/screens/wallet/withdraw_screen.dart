@@ -1,9 +1,9 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/primary_button.dart';
+import '../../services/wallet_service.dart';
 
 enum _WithdrawStep { amount, method, summary, submitted }
 
@@ -29,7 +29,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   String? _amountError;
   int _methodIndex = 0;
   bool _submitting = false;
-  late final String _transactionId = _generateTxnId();
+  String? _transactionId;
+
 
   static const _methods = [
     _WithdrawMethod('Bank Transfer', Icons.account_balance_outlined, 0.02,
@@ -54,14 +55,6 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     super.dispose();
   }
 
-  String _generateTxnId() {
-    final r = Random();
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
-    final id =
-        List.generate(10, (_) => chars[r.nextInt(chars.length)]).join();
-    return 'NM-$id';
-  }
-
   void _validateAndContinue() {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
@@ -80,12 +73,26 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
 
   Future<void> _confirmWithdrawal() async {
     setState(() => _submitting = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    setState(() {
-      _submitting = false;
-      _step = _WithdrawStep.submitted;
-    });
+    try {
+      final ref = await WalletService.instance.requestWithdrawal(
+        amount: _amount,
+        fee: _fee,
+        method: _method.label,
+      );
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _transactionId = ref;
+        _step = _WithdrawStep.submitted;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      final msg = e.toString().contains('Insufficient balance')
+          ? "That's more than your available balance."
+          : 'Withdrawal failed. Try again.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
   }
 
   @override
