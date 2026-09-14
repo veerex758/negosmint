@@ -88,11 +88,26 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      final msg = e.toString().contains('Insufficient balance')
-          ? "That's more than your available balance."
-          : 'Withdrawal failed. Try again.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_friendlyError(e))));
     }
+  }
+
+  String _friendlyError(Object e) {
+    final msg = e.toString();
+    if (msg.contains('Insufficient balance')) {
+      return "That's more than your available balance.";
+    }
+    if (msg.contains('already have a pending withdrawal')) {
+      return 'You already have a withdrawal in progress — wait for it to finish first.';
+    }
+    if (msg.contains('Withdrawal limit reached')) {
+      return "You've hit today's withdrawal limit — try again tomorrow.";
+    }
+    if (msg.contains('Account is suspended')) {
+      return 'Your account is suspended. Contact support for help.';
+    }
+    return 'Withdrawal failed. Try again.';
   }
 
   @override

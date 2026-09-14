@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/glass_card.dart';
@@ -42,6 +43,16 @@ class _ReferralScreenState extends State<ReferralScreen> {
     Clipboard.setData(ClipboardData(text: code));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Referral code copied.')),
+    );
+  }
+
+  void _shareCode(String code) {
+    SharePlus.instance.share(
+      ShareParams(
+        text:
+            "Join me on NegosMint and start earning! Use my referral code $code when you sign up.",
+        subject: 'Join NegosMint',
+      ),
     );
   }
 
@@ -144,15 +155,8 @@ class _ReferralScreenState extends State<ReferralScreen> {
                                     child: PrimaryButton(
                                       label: 'Share',
                                       icon: Icons.share_rounded,
-                                      onPressed: () {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                                'Sharing is coming soon — copy your code for now.'),
-                                          ),
-                                        );
-                                      },
+                                      onPressed: () =>
+                                          _shareCode(data.profile.referralCode),
                                     ),
                                   ),
                                 ],

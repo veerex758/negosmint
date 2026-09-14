@@ -87,9 +87,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _reload();
     } catch (e) {
       if (!mounted) return;
-      final msg = e.toString().contains('already completed')
+      final errText = e.toString();
+      final msg = errText.contains('already completed')
           ? 'You already completed this task.'
-          : 'Something went wrong. Try again.';
+          : errText.contains('Too many tasks completed')
+              ? "You're completing tasks quickly — take a short break and try again."
+              : 'Something went wrong. Try again.';
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(msg)));
     } finally {

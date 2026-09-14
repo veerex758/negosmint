@@ -79,6 +79,9 @@ class _TasksScreenState extends State<TasksScreen> {
     final msg = e.toString();
     if (msg.contains('already completed')) return 'You already completed this task.';
     if (msg.contains('duplicate key')) return 'You already started this task.';
+    if (msg.contains('Too many tasks completed')) {
+      return "You're completing tasks quickly — take a short break and try again.";
+    }
     return 'Something went wrong. Try again.';
   }
 

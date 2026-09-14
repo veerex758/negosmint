@@ -40,7 +40,14 @@ yet (see "Not included" below).
 3. Run `supabase/admin_migration.sql` next (same SQL editor, new query).
    It adds everything the admin dashboard needs — suspension support,
    admin RLS policies, and the approve/reject-withdrawal functions.
-4. Make your own account an admin: sign up in the app first (so your
+4. Run `supabase/rate_limiting.sql` next. It layers rate limits onto
+   `complete_task()` and `request_withdrawal()` (max 20 task completions/
+   hour, one pending withdrawal at a time, 5 withdrawals/24h) and adds a
+   `fraud_flags` table that gets a row if 5+ signups credit the same
+   referral code within an hour — a signal for an admin to review, not
+   an automatic block, since that pattern also happens organically (e.g.
+   a shared wifi network).
+5. Make your own account an admin: sign up in the app first (so your
    `profiles` row exists), then in the SQL editor run:
 
    ```sql
@@ -50,8 +57,8 @@ yet (see "Not included" below).
 
    Log out and back in — you'll see **Admin Dashboard** at the bottom of
    the Profile screen's menu.
-5. Grab your project's URL and anon key from Project Settings → API.
-6. Run locally with both passed in:
+6. Grab your project's URL and anon key from Project Settings → API.
+7. Run locally with both passed in:
 
    ```bash
    flutter pub get
@@ -60,7 +67,7 @@ yet (see "Not included" below).
      --dart-define=SUPABASE_ANON_KEY=eyJhbGciOi...
    ```
 
-7. For CI, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as repo secrets
+8. For CI, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as repo secrets
    (Settings → Secrets and variables → Actions) — `build-apk.yml` already
    passes them through to the release build.
 
@@ -72,22 +79,17 @@ to talk to yet.
 
 - Settings sub-pages and the level/XP UI.
 - Deposits (button shows a "coming soon" message — there's no deposit
-  flow or payment provider integration yet).
-- Sharing a referral code (button shows a message for now — needs a
-  share plugin like `share_plus`, not added to keep dependencies minimal
-  until you ask for it).
-- Rate limiting and bot/device fraud detection beyond what the DB
-  constraints already catch (duplicate task submissions, double-spend on
-  withdrawals, double-crediting a reward, suspended accounts blocked from
-  starting tasks or withdrawing).
+  flow or payment provider integration yet, and picking one — Stripe,
+  Paystack, Flutterwave, etc. — is a decision only you can make).
 
 Everything else — sign up, sign in, browsing/starting/completing tasks,
-wallet balance and history, withdrawals, referral code and stats,
+wallet balance and history, withdrawals, referral code/stats/sharing,
 notifications, profile stats, logout, the dashboard's weekly change %,
-the earnings chart's 7D/1M/3M/1Y series, and the admin dashboard
-(analytics, withdrawal approve/reject, task create/disable, user
-suspend) — is wired to Supabase for real once you've run both SQL files
-and set your credentials.
+the earnings chart's 7D/1M/3M/1Y series, the admin dashboard (analytics,
+withdrawal approve/reject, task create/disable, user suspend), and
+rate limiting (task-completion speed cap, withdrawal frequency cap,
+referral-velocity flagging) — is wired to Supabase for real once you've
+run all three SQL files and set your credentials.
 
 ## Structure
 
