@@ -66,4 +66,19 @@ class AuthService {
         .maybeSingle();
     return (row?['current_streak'] as int?) ?? 0;
   }
+
+  /// Current level + XP, from the `levels` table. XP is awarded
+  /// server-side by complete_task() (10 XP per $1 earned) — see
+  /// supabase/rate_limiting.sql.
+  Future<({int xp, int level})> fetchLevel(String userId) async {
+    final row = await supabase
+        .from('levels')
+        .select('xp, level')
+        .eq('user_id', userId)
+        .maybeSingle();
+    return (
+      xp: (row?['xp'] as int?) ?? 0,
+      level: (row?['level'] as int?) ?? 1,
+    );
+  }
 }

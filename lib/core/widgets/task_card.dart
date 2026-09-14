@@ -10,6 +10,8 @@ class TaskItem {
     required this.reward,
     required this.minutes,
     this.id,
+    this.description,
+    this.requirements,
   });
 
   final String? id;
@@ -17,6 +19,16 @@ class TaskItem {
   final String category;
   final double reward;
   final int minutes;
+  final String? description;
+  final String? requirements;
+
+  /// No dedicated difficulty column in the DB — derived from estimated
+  /// time, which is a reasonable enough proxy without inventing data.
+  String get difficulty {
+    if (minutes <= 3) return 'Easy';
+    if (minutes <= 10) return 'Medium';
+    return 'Hard';
+  }
 
   factory TaskItem.fromModel(TaskModel model) => TaskItem(
         id: model.id,
@@ -24,20 +36,29 @@ class TaskItem {
         category: model.category,
         reward: model.reward,
         minutes: model.minutes,
+        description: model.description,
+        requirements: model.requirements,
       );
 }
 
 class TaskCard extends StatelessWidget {
-  const TaskCard({super.key, required this.task, this.onStart, this.busy = false});
+  const TaskCard({super.key, required this.task, this.onTap, this.busy = false});
 
   final TaskItem task;
-  final VoidCallback? onStart;
+  final VoidCallback? onTap;
   final bool busy;
+
+  Color get _difficultyColor => switch (task.difficulty) {
+        'Easy' => AppColors.success,
+        'Medium' => AppColors.warning,
+        _ => AppColors.danger,
+      };
 
   @override
   Widget build(BuildContext context) {
     return GlassCard(
       borderRadius: 20,
+      onTap: busy ? null : onTap,
       child: Row(
         children: [
           Container(
@@ -64,45 +85,52 @@ class TaskCard extends StatelessWidget {
                 Text('${task.category} · ${task.minutes} min',
                     style: const TextStyle(
                         color: AppColors.textSecondary, fontSize: 12)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _difficultyColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(task.difficulty,
+                          style: TextStyle(
+                              color: _difficultyColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text('· High availability',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 10)),
+                  ],
+                ),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text('+\$${task.reward.toStringAsFixed(2)}',
                   style: const TextStyle(
                       color: AppColors.success,
                       fontWeight: FontWeight.w700,
                       fontSize: 14)),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 32,
-                child: TextButton(
-                  onPressed: busy ? null : onStart,
-                  style: TextButton.styleFrom(
-                    backgroundColor: AppColors.cobalt.withValues(alpha: 0.15),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: busy
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation(AppColors.highlight),
-                          ),
-                        )
-                      : const Text('START',
-                          style: TextStyle(
-                              color: AppColors.highlight,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700)),
-                ),
-              ),
+              const SizedBox(height: 6),
+              busy
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(AppColors.highlight),
+                      ),
+                    )
+                  : const Icon(Icons.chevron_right_rounded,
+                      color: AppColors.textSecondary, size: 20),
             ],
           ),
         ],

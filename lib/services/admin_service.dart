@@ -2,6 +2,7 @@ import 'supabase_client.dart';
 import '../models/admin_analytics.dart';
 import '../models/admin_withdrawal.dart';
 import '../models/admin_user_row.dart';
+import '../models/admin_growth_point.dart';
 import '../models/task_model.dart';
 
 /// Every method here is only meaningful for an account with
@@ -19,6 +20,13 @@ class AdminService {
     final list = rows as List;
     if (list.isEmpty) return AdminAnalytics.zero;
     return AdminAnalytics.fromMap(list.first as Map<String, dynamic>);
+  }
+
+  Future<List<AdminGrowthPoint>> fetchGrowthSeries() async {
+    final rows = await supabase.rpc('admin_growth_series');
+    return (rows as List)
+        .map((r) => AdminGrowthPoint.fromMap(r as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<AdminWithdrawal>> fetchWithdrawals({String? status}) async {

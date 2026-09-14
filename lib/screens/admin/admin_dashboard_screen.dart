@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/glass_card.dart';
@@ -7,6 +8,7 @@ import '../../services/admin_service.dart';
 import '../../models/admin_analytics.dart';
 import '../../models/admin_withdrawal.dart';
 import '../../models/admin_user_row.dart';
+import '../../models/admin_growth_point.dart';
 import '../../models/task_model.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -116,21 +118,30 @@ class _OverviewTab extends StatefulWidget {
   State<_OverviewTab> createState() => _OverviewTabState();
 }
 
+typedef _OverviewData = (AdminAnalytics, List<AdminGrowthPoint>);
+
 class _OverviewTabState extends State<_OverviewTab> {
-  late Future<AdminAnalytics> _future;
+  late Future<_OverviewData> _future;
 
   @override
   void initState() {
     super.initState();
-    _future = AdminService.instance.fetchAnalytics();
+    _future = _load();
   }
 
-  void _reload() =>
-      setState(() => _future = AdminService.instance.fetchAnalytics());
+  Future<_OverviewData> _load() async {
+    final results = await Future.wait([
+      AdminService.instance.fetchAnalytics(),
+      AdminService.instance.fetchGrowthSeries(),
+    ]);
+    return (results[0] as AdminAnalytics, results[1] as List<AdminGrowthPoint>);
+  }
+
+  void _reload() => setState(() => _future = _load());
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AdminAnalytics>(
+    return FutureBuilder<_OverviewData>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -147,8 +158,15 @@ class _OverviewTabState extends State<_OverviewTab> {
             ),
           );
         }
-        final a = snapshot.data!;
-        final cards = [
+        final (a, growth) = snapshot.data!;
+
+        final todayCards = [
+          ('New Users', '${a.newUsersToday}'),
+          ('Tasks Completed', '${a.tasksCompletedToday}'),
+          ('Pending Withdrawals', '${a.pendingWithdrawals}'),
+          ('Revenue', '\$${a.revenueToday.toStringAsFixed(2)}'),
+        ];
+        final allTimeCards = [
           ('Total Users', '${a.totalUsers}'),
           ('Active Users (30d)', '${a.activeUsers}'),
           ('Tasks Completed', '${a.tasksCompleted}'),
@@ -156,40 +174,167 @@ class _OverviewTabState extends State<_OverviewTab> {
           ('Total Withdrawals', '\$${a.totalWithdrawals.toStringAsFixed(2)}'),
           ('Revenue', '\$${a.revenue.toStringAsFixed(2)}'),
         ];
+
         return RefreshIndicator(
           onRefresh: () async => _reload(),
           color: AppColors.highlight,
           backgroundColor: AppColors.surface,
-          child: GridView.builder(
+          child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.5,
-            ),
-            itemCount: cards.length,
-            itemBuilder: (context, i) => GlassCard(
-              borderRadius: 18,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(cards[i].$2,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 4),
-                  Text(cards[i].$1,
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 12)),
-                ],
+            children: [
+              const Text('Today',
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15)),
+              const SizedBox(height: 10),
+              _StatGrid(cards: todayCards),
+              const SizedBox(height: 20),
+              const Text('All Time',
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15)),
+              const SizedBox(height: 10),
+              _StatGrid(cards: allTimeCards),
+              const SizedBox(height: 20),
+              _GrowthChart(
+                title: 'Users Growth — 7D',
+                color: AppColors.cobalt,
+                values: [for (final p in growth) p.newUsers.toDouble()],
               ),
-            ),
+              const SizedBox(height: 16),
+              _GrowthChart(
+                title: 'Task Completion — 7D',
+                color: AppColors.success,
+                values: [for (final p in growth) p.tasksCompleted.toDouble()],
+              ),
+              const SizedBox(height: 16),
+              _GrowthChart(
+                title: 'Withdrawal Volume — 7D',
+                color: AppColors.violet,
+                values: [for (final p in growth) p.withdrawalVolume],
+                isCurrency: true,
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+}
+
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({required this.cards});
+  final List<(String, String)> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.5,
+      ),
+      itemCount: cards.length,
+      itemBuilder: (context, i) => GlassCard(
+        borderRadius: 18,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(cards[i].$2,
+                style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text(cards[i].$1,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GrowthChart extends StatelessWidget {
+  const _GrowthChart({
+    required this.title,
+    required this.color,
+    required this.values,
+    this.isCurrency = false,
+  });
+
+  final String title;
+  final Color color;
+  final List<double> values;
+  final bool isCurrency;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = values.fold(0.0, (a, b) => a + b);
+    return GlassCard(
+      borderRadius: 18,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(title,
+                    style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13)),
+              ),
+              Text(
+                isCurrency
+                    ? '\$${total.toStringAsFixed(2)}'
+                    : total.toStringAsFixed(0),
+                style: TextStyle(
+                    color: color, fontWeight: FontWeight.w800, fontSize: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 60,
+            child: values.every((v) => v == 0)
+                ? const Center(
+                    child: Text('No activity in the last 7 days.',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 11)),
+                  )
+                : BarChart(
+                    BarChartData(
+                      gridData: const FlGridData(show: false),
+                      titlesData: const FlTitlesData(show: false),
+                      borderData: FlBorderData(show: false),
+                      barTouchData: BarTouchData(enabled: false),
+                      barGroups: [
+                        for (var i = 0; i < values.length; i++)
+                          BarChartGroupData(
+                            x: i,
+                            barRods: [
+                              BarChartRodData(
+                                toY: values[i],
+                                color: color,
+                                width: 14,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

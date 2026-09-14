@@ -99,6 +99,10 @@ begin
     raise exception 'Account is suspended';
   end if;
 
+  if p_amount < 5 then
+    raise exception 'Minimum withdrawal is $5.00';
+  end if;
+
   select count(*) into v_pending_count
   from public.withdrawals
   where user_id = auth.uid() and status = 'pending';

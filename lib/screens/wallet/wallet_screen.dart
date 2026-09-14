@@ -50,13 +50,15 @@ class _WalletScreenState extends State<WalletScreen> {
   String _title(WalletTransaction t) {
     switch (t.type) {
       case 'task_reward':
-        return 'Task completed';
+        return 'Task reward';
       case 'referral_reward':
         return 'Referral reward';
       case 'withdrawal':
         return 'Withdrawal';
       case 'deposit':
         return 'Deposit';
+      case 'adjustment':
+        return 'Refund';
       default:
         return 'Adjustment';
     }
@@ -66,6 +68,7 @@ class _WalletScreenState extends State<WalletScreen> {
     if (t.status == 'pending') return 'pending';
     if (t.type == 'withdrawal') return 'withdrawal';
     if (t.type == 'referral_reward') return 'referral';
+    if (t.type == 'adjustment') return 'refund';
     return 'earning';
   }
 
@@ -77,6 +80,8 @@ class _WalletScreenState extends State<WalletScreen> {
         return AppColors.highlight;
       case 'withdrawal':
         return AppColors.danger;
+      case 'refund':
+        return AppColors.violet;
       default:
         return AppColors.warning;
     }
@@ -90,6 +95,8 @@ class _WalletScreenState extends State<WalletScreen> {
         return Icons.groups_outlined;
       case 'withdrawal':
         return Icons.north_east_rounded;
+      case 'refund':
+        return Icons.replay_rounded;
       default:
         return Icons.hourglass_empty;
     }
@@ -177,7 +184,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                               .showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                  'Deposits are coming soon.'),
+                                                  "Deposits aren't open yet — for now, earn through tasks and referrals."),
                                             ),
                                           );
                                         },

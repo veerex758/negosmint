@@ -120,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Cobalt. Precision. Motion.',
+                          'Earn. Achieve. Advance.',
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,

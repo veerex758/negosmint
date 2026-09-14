@@ -9,7 +9,7 @@ import '../../services/task_service.dart';
 import '../../models/app_profile.dart';
 import '../../models/wallet_transaction.dart';
 import '../notifications/notifications_screen.dart';
-import '../tasks/task_completion_screen.dart';
+import '../tasks/task_detail_screen.dart';
 import '../tasks/tasks_screen.dart';
 import '../wallet/wallet_screen.dart';
 import '../wallet/withdraw_screen.dart';
@@ -36,7 +36,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   Future<_DashboardData>? _dataFuture;
-  String? _busyTaskId;
 
   @override
   void initState() {
@@ -71,33 +70,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _reload() => setState(() => _dataFuture = _load());
 
-  Future<void> _startTask(TaskItem task) async {
-    if (task.id == null) return;
-    setState(() => _busyTaskId = task.id);
-    try {
-      final submissionId = await TaskService.instance.startTask(task.id!);
-      await TaskService.instance.completeTask(submissionId);
-      if (!mounted) return;
-      await Navigator.of(context).push(
-        appRoute(
-          TaskCompletionScreen(taskTitle: task.title, reward: task.reward),
-        ),
-      );
-      if (!mounted) return;
-      _reload();
-    } catch (e) {
-      if (!mounted) return;
-      final errText = e.toString();
-      final msg = errText.contains('already completed')
-          ? 'You already completed this task.'
-          : errText.contains('Too many tasks completed')
-              ? "You're completing tasks quickly — take a short break and try again."
-              : 'Something went wrong. Try again.';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg)));
-    } finally {
-      if (mounted) setState(() => _busyTaskId = null);
-    }
+  Future<void> _openTask(TaskItem task) async {
+    await Navigator.of(context).push(appRoute(TaskDetailScreen(task: task)));
+    _reload();
   }
 
   @override
@@ -143,13 +118,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   color: AppColors.textPrimary),
                               const SizedBox(width: 14),
                               Expanded(
-                                child: Text(
-                                  'Hello, $name!',
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Hello, $name 👋',
+                                      style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'Ready to earn today?',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               IconButton(
@@ -227,11 +214,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 20),
                           const EarningsChart(),
                           const SizedBox(height: 20),
-                          const Text('Available Tasks',
+                          const Text('Recommended for you',
                               style: TextStyle(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 15)),
+                          if (data.tasks.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '⚡ ${data.tasks.length} task${data.tasks.length == 1 ? '' : 's'} · Up to \$${data.tasks.map((t) => t.reward).fold(0.0, (a, b) => a + b).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12),
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           if (data.tasks.isEmpty)
                             const Padding(
@@ -247,8 +243,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             for (final t in data.tasks) ...[
                               TaskCard(
                                 task: t,
-                                busy: _busyTaskId == t.id,
-                                onStart: () => _startTask(t),
+                                onTap: () => _openTask(t),
                               ),
                               const SizedBox(height: 12),
                             ],

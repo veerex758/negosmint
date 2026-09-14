@@ -3,9 +3,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/task_card.dart';
 import '../../core/widgets/app_page_route.dart';
-import '../../services/auth_service.dart';
 import '../../services/task_service.dart';
-import 'task_completion_screen.dart';
+import 'task_detail_screen.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -21,7 +20,6 @@ class _TasksScreenState extends State<TasksScreen> {
   String _selected = 'All';
 
   late Future<List<TaskItem>> _tasksFuture;
-  String? _busyTaskId;
 
   @override
   void initState() {
@@ -38,51 +36,13 @@ class _TasksScreenState extends State<TasksScreen> {
     setState(() => _tasksFuture = _loadTasks());
   }
 
-  Future<void> _startTask(TaskItem task) async {
-    if (task.id == null) return; // demo task with no backend id
-    if (!AuthService.instance.isSignedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign in to start a task.')),
-      );
-      return;
-    }
-
-    setState(() => _busyTaskId = task.id);
-    try {
-      // Starting and completing back-to-back stands in for whatever the
-      // real task actually involves (watching a video, filling a survey,
-      // etc.) — the reward itself is credited server-side by
-      // complete_task(), never by this client directly.
-      final submissionId = await TaskService.instance.startTask(task.id!);
-      await TaskService.instance.completeTask(submissionId);
-      if (!mounted) return;
-      await Navigator.of(context).push(
-        appRoute(
-          TaskCompletionScreen(taskTitle: task.title, reward: task.reward),
-        ),
-      );
-      if (!mounted) return;
-      _reload(); // this task now has a submission, so it may drop out of
-      // the "available" list depending on how your task list query is set
-      // up — refetching keeps the UI honest either way.
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_friendlyError(e))),
-      );
-    } finally {
-      if (mounted) setState(() => _busyTaskId = null);
-    }
-  }
-
-  String _friendlyError(Object e) {
-    final msg = e.toString();
-    if (msg.contains('already completed')) return 'You already completed this task.';
-    if (msg.contains('duplicate key')) return 'You already started this task.';
-    if (msg.contains('Too many tasks completed')) {
-      return "You're completing tasks quickly — take a short break and try again.";
-    }
-    return 'Something went wrong. Try again.';
+  Future<void> _openTask(TaskItem task) async {
+    await Navigator.of(context).push(
+      appRoute(TaskDetailScreen(task: task)),
+    );
+    // The task may have moved out of the "available" list after being
+    // completed — refetch so the list stays honest.
+    _reload();
   }
 
   @override
@@ -172,8 +132,7 @@ class _TasksScreenState extends State<TasksScreen> {
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, i) => TaskCard(
                           task: tasks[i],
-                          busy: _busyTaskId == tasks[i].id,
-                          onStart: () => _startTask(tasks[i]),
+                          onTap: () => _openTask(tasks[i]),
                         ),
                       ),
                     );

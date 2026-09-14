@@ -1,10 +1,10 @@
 # NegosMint (Flutter)
 
-**Cobalt. Precision. Motion.**
+**Earn. Achieve. Advance.**
 
-This is Phase 1–3 of the NegosMint build plan (Foundation + UI + Core screens),
-implemented in Flutter/Dart with the Midnight Cobalt identity — no neon green
-anywhere.
+Implemented in Flutter/Dart with the Midnight Cobalt identity — no neon
+green anywhere. Covers the full original build plan except deposits (see
+"Not included" below).
 
 ## What's included
 
@@ -19,16 +19,17 @@ anywhere.
   - `ParticleBackground` — obsidian gradient + soft glow blobs + drifting
     dots (stand-in for the world map, no image assets needed).
   - `AnimatedCounter` — smooth balance counting instead of instant jumps.
-  - `TaskCard` — shared task-list item.
-- **Screens**: Splash (logo fade/scale/glow → auto-navigates), Login,
-  Register (with success check animation), Dashboard (streak, balance,
-  quick actions, earnings mini-chart, available tasks), Tasks (category
-  filters), Wallet (breakdown + transaction history), Referrals (code +
-  stats), Profile (stats + settings menu), and a glass bottom-nav shell
-  tying them together.
-
-All data on these screens is local placeholder state — there is no backend
-yet (see "Not included" below).
+  - `TaskCard` — shared task-list item; tapping it opens Task Details
+    rather than starting the task immediately.
+- **Screens**: Splash, Login, Register, Dashboard (streak, balance, quick
+  actions, real earnings chart, recommended tasks), Tasks (category
+  filters), **Task Details** (reward/time/difficulty/requirements/steps
+  before committing), Wallet (breakdown + transaction history), Withdraw
+  (amount → method → summary → confirm), Referrals (code, stats, real
+  share sheet), Notifications, Profile (stats, Level/XP progress bar,
+  settings menu), Admin Dashboard (analytics, withdrawal approve/reject,
+  task management, user suspend), and a glass bottom-nav shell tying the
+  main five together.
 
 ## Backend setup (Supabase)
 
@@ -42,12 +43,19 @@ yet (see "Not included" below).
    admin RLS policies, and the approve/reject-withdrawal functions.
 4. Run `supabase/rate_limiting.sql` next. It layers rate limits onto
    `complete_task()` and `request_withdrawal()` (max 20 task completions/
-   hour, one pending withdrawal at a time, 5 withdrawals/24h) and adds a
-   `fraud_flags` table that gets a row if 5+ signups credit the same
-   referral code within an hour — a signal for an admin to review, not
-   an automatic block, since that pattern also happens organically (e.g.
-   a shared wifi network).
-5. Make your own account an admin: sign up in the app first (so your
+   hour, one pending withdrawal at a time, 5 withdrawals/24h, $5 minimum
+   withdrawal) and adds a `fraud_flags` table that gets a row if 5+
+   signups credit the same referral code within an hour — a signal for
+   an admin to review, not an automatic block, since that pattern also
+   happens organically (e.g. a shared wifi network).
+5. Run `supabase/leveling.sql` next. Both the `levels` and `streaks`
+   tables have existed since schema.sql but nothing ever wrote to
+   them — this wires up XP (10 per $1 earned), levels, daily streaks,
+   and their notifications on task completion.
+6. Run `supabase/admin_today_stats.sql` next. Adds today's figures
+   (new users, tasks completed, pending withdrawals, revenue) and a
+   7-day series for the Overview tab's growth charts.
+7. Make your own account an admin: sign up in the app first (so your
    `profiles` row exists), then in the SQL editor run:
 
    ```sql
@@ -57,8 +65,8 @@ yet (see "Not included" below).
 
    Log out and back in — you'll see **Admin Dashboard** at the bottom of
    the Profile screen's menu.
-6. Grab your project's URL and anon key from Project Settings → API.
-7. Run locally with both passed in:
+8. Grab your project's URL and anon key from Project Settings → API.
+9. Run locally with both passed in:
 
    ```bash
    flutter pub get
@@ -67,7 +75,7 @@ yet (see "Not included" below).
      --dart-define=SUPABASE_ANON_KEY=eyJhbGciOi...
    ```
 
-8. For CI, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as repo secrets
+10. For CI, add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as repo secrets
    (Settings → Secrets and variables → Actions) — `build-apk.yml` already
    passes them through to the release build.
 
@@ -77,19 +85,22 @@ to talk to yet.
 
 ## Not included yet (per the original phased plan)
 
-- Settings sub-pages and the level/XP UI.
-- Deposits (button shows a "coming soon" message — there's no deposit
-  flow or payment provider integration yet, and picking one — Stripe,
-  Paystack, Flutterwave, etc. — is a decision only you can make).
+- Settings sub-pages (Edit Profile, Security, Language, Help, Terms,
+  Privacy are all placeholder menu items — the Level/XP piece they used
+  to lack is now built).
+- Deposits (button shows a message rather than a real flow — there's no
+  payment provider integration yet, and picking one — Stripe, Paystack,
+  Flutterwave, etc. — is a decision only you can make).
 
-Everything else — sign up, sign in, browsing/starting/completing tasks,
-wallet balance and history, withdrawals, referral code/stats/sharing,
-notifications, profile stats, logout, the dashboard's weekly change %,
-the earnings chart's 7D/1M/3M/1Y series, the admin dashboard (analytics,
-withdrawal approve/reject, task create/disable, user suspend), and
-rate limiting (task-completion speed cap, withdrawal frequency cap,
-referral-velocity flagging) — is wired to Supabase for real once you've
-run all three SQL files and set your credentials.
+Everything else — sign up, sign in, browsing tasks, task details,
+starting/completing tasks, wallet balance and history, withdrawals,
+referral code/stats/sharing, notifications, profile stats and Level/XP,
+logout, the dashboard's weekly change %, the earnings chart's
+7D/1M/3M/1Y series, the admin dashboard (analytics, withdrawal
+approve/reject, task create/disable, user suspend), and rate limiting
+(task-completion speed cap, withdrawal frequency/minimum, referral-
+velocity flagging), and Level/XP/streaks — is wired to Supabase for real
+once you've run all five SQL files and set your credentials.
 
 ## Structure
 
@@ -97,9 +108,17 @@ run all three SQL files and set your credentials.
 lib/
 ├── main.dart
 ├── core/{theme,widgets,config}
-├── models/          # AppProfile, WalletTransaction, TaskModel
-├── services/         # AuthService, WalletService, TaskService
-└── screens/{splash,auth,dashboard,tasks,wallet,referral,profile,main_nav,notifications}
+├── models/          # AppProfile, WalletTransaction, TaskModel,
+│                     # AdminAnalytics, AdminWithdrawal, AdminUserRow,
+│                     # AdminGrowthPoint, etc.
+├── services/         # AuthService, WalletService, TaskService,
+│                     # NotificationService, ReferralService, AdminService
+└── screens/{splash,auth,dashboard,tasks,wallet,referral,profile,
+             main_nav,notifications,admin}
 supabase/
-└── schema.sql        # run this in the Supabase SQL editor
+├── schema.sql            # run first
+├── admin_migration.sql   # run second
+├── rate_limiting.sql     # run third
+├── leveling.sql          # run fourth (XP, levels, streaks)
+└── admin_today_stats.sql # run fifth (Today stats + growth charts)
 ```

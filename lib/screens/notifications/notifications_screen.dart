@@ -45,8 +45,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Icons.bolt_rounded;
       case 'referral_reward':
         return Icons.groups_outlined;
+      case 'level_up':
+        return Icons.military_tech_outlined;
+      case 'streak_maintained':
+        return Icons.local_fire_department_outlined;
       default:
         return Icons.notifications_none_rounded;
+    }
+  }
+
+  String _emojiFor(String type) {
+    switch (type) {
+      case 'task_completed':
+        return '🎉';
+      case 'withdrawal_update':
+        return '💰';
+      case 'new_task':
+        return '⚡';
+      case 'referral_reward':
+        return '👥';
+      case 'level_up':
+        return '🏆';
+      case 'streak_maintained':
+        return '🔥';
+      default:
+        return '🔔';
     }
   }
 
@@ -168,7 +191,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                           Row(
                                             children: [
                                               Expanded(
-                                                child: Text(item.title,
+                                                child: Text(
+                                                    '${_emojiFor(item.type)} ${item.title}',
                                                     style: const TextStyle(
                                                         color: AppColors
                                                             .textPrimary,

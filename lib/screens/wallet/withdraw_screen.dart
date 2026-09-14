@@ -55,10 +55,17 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     super.dispose();
   }
 
+  static const minimumWithdrawal = 5.0;
+
   void _validateAndContinue() {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
       setState(() => _amountError = 'Enter a valid amount');
+      return;
+    }
+    if (amount < minimumWithdrawal) {
+      setState(() =>
+          _amountError = 'Minimum withdrawal is \$${minimumWithdrawal.toStringAsFixed(2)}');
       return;
     }
     if (amount > widget.availableBalance) {
@@ -106,6 +113,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     }
     if (msg.contains('Account is suspended')) {
       return 'Your account is suspended. Contact support for help.';
+    }
+    if (msg.contains('Minimum withdrawal')) {
+      return 'Minimum withdrawal is \$${minimumWithdrawal.toStringAsFixed(2)}.';
     }
     return 'Withdrawal failed. Try again.';
   }
@@ -218,6 +228,12 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           ),
           const SizedBox(height: 24),
           PrimaryButton(label: 'Continue', onPressed: _validateAndContinue),
+          const SizedBox(height: 12),
+          Text(
+            'Minimum withdrawal: \$${minimumWithdrawal.toStringAsFixed(2)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+          ),
         ],
       ),
     );
