@@ -11,6 +11,7 @@ import '../../models/app_profile.dart';
 import '../../models/referral_stats.dart';
 import '../../models/wallet_transaction.dart';
 import '../auth/login_screen.dart';
+import '../admin/admin_dashboard_screen.dart';
 
 typedef _ProfileData = ({
   AppProfile? profile,
@@ -70,25 +71,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final menu = [
-      (icon: Icons.edit_outlined, label: 'Edit Profile', onTap: () {}),
-      (icon: Icons.shield_outlined, label: 'Account Security', onTap: () {}),
-      (
-        icon: Icons.notifications_none_rounded,
-        label: 'Notifications',
-        onTap: () {}
-      ),
-      (icon: Icons.public, label: 'Language', onTap: () {}),
-      (icon: Icons.help_outline_rounded, label: 'Help & Support', onTap: () {}),
-      (icon: Icons.description_outlined, label: 'Terms', onTap: () {}),
-      (icon: Icons.privacy_tip_outlined, label: 'Privacy', onTap: () {}),
-      (
-        icon: Icons.logout_rounded,
-        label: 'Logout',
-        onTap: () => _logout(context)
-      ),
-    ];
-
     return Scaffold(
       body: ParticleBackground(
         child: SafeArea(
@@ -118,6 +100,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     final username = data.profile?.username;
                     final initial =
                         name.isNotEmpty ? name[0].toUpperCase() : '?';
+                    final isAdmin = data.profile?.isAdmin ?? false;
+
+                    final menu = [
+                      (icon: Icons.edit_outlined, label: 'Edit Profile', onTap: () {}),
+                      (icon: Icons.shield_outlined, label: 'Account Security', onTap: () {}),
+                      (
+                        icon: Icons.notifications_none_rounded,
+                        label: 'Notifications',
+                        onTap: () {}
+                      ),
+                      (icon: Icons.public, label: 'Language', onTap: () {}),
+                      (
+                        icon: Icons.help_outline_rounded,
+                        label: 'Help & Support',
+                        onTap: () {}
+                      ),
+                      (icon: Icons.description_outlined, label: 'Terms', onTap: () {}),
+                      (icon: Icons.privacy_tip_outlined, label: 'Privacy', onTap: () {}),
+                      if (isAdmin)
+                        (
+                          icon: Icons.admin_panel_settings_outlined,
+                          label: 'Admin Dashboard',
+                          onTap: () => Navigator.of(context).push(
+                            appRoute(const AdminDashboardScreen()),
+                          ),
+                        ),
+                      (
+                        icon: Icons.logout_rounded,
+                        label: 'Logout',
+                        onTap: () => _logout(context)
+                      ),
+                    ];
 
                     return ListView(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),

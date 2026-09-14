@@ -6,6 +6,7 @@ class TaskModel {
     required this.reward,
     required this.minutes,
     this.description,
+    this.isActive = true,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class TaskModel {
   final double reward;
   final int minutes;
   final String? description;
+  final bool isActive;
 
   factory TaskModel.fromMap(Map<String, dynamic> map) {
     return TaskModel(
@@ -23,6 +25,7 @@ class TaskModel {
       reward: (map['reward'] as num).toDouble(),
       minutes: map['minutes'] as int,
       description: map['description'] as String?,
+      isActive: map['is_active'] as bool? ?? true,
     );
   }
 }
