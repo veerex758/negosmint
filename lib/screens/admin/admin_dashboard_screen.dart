@@ -522,7 +522,7 @@ class _TasksTabState extends State<_TasksTab> {
                         ),
                         Switch(
                           value: t.isActive,
-                          activeColor: AppColors.cobalt,
+                          activeThumbColor: AppColors.cobalt,
                           onChanged: (_) => _toggleActive(t),
                         ),
                       ],
