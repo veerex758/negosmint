@@ -41,6 +41,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Icons.check_circle_outline;
       case 'withdrawal_update':
         return Icons.north_east_rounded;
+      case 'deposit_update':
+        return Icons.south_west_rounded;
       case 'new_task':
         return Icons.bolt_rounded;
       case 'referral_reward':
@@ -60,6 +62,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return '🎉';
       case 'withdrawal_update':
         return '💰';
+      case 'deposit_update':
+        return '💳';
       case 'new_task':
         return '⚡';
       case 'referral_reward':

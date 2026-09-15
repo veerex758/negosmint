@@ -9,6 +9,7 @@ import '../../services/auth_service.dart';
 import '../../services/wallet_service.dart';
 import '../../models/wallet_transaction.dart';
 import 'withdraw_screen.dart';
+import 'deposit_screen.dart';
 
 typedef _WalletData = ({WalletBalance balance, List<WalletTransaction> txns});
 
@@ -179,14 +180,11 @@ class _WalletScreenState extends State<WalletScreen> {
                                       child: PrimaryButton(
                                         label: 'Deposit',
                                         outlined: true,
-                                        onPressed: () {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                  "Deposits aren't open yet — for now, earn through tasks and referrals."),
-                                            ),
+                                        onPressed: () async {
+                                          await Navigator.of(context).push(
+                                            appRoute(const DepositScreen()),
                                           );
+                                          _reload();
                                         },
                                       ),
                                     ),
