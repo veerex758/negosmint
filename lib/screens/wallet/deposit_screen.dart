@@ -191,10 +191,10 @@ class _DepositScreenState extends State<DepositScreen> {
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 16),
-          GlassCard(
+          const GlassCard(
             borderRadius: 14,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: const Row(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
               children: [
                 Icon(Icons.lock_outline, size: 16, color: AppColors.highlight),
                 SizedBox(width: 10),
