@@ -32,8 +32,6 @@ class _DepositScreenState extends State<DepositScreen> {
     super.dispose();
   }
 
-  double get _amount => double.tryParse(_amountController.text) ?? 0;
-
   Future<void> _startDeposit() async {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
@@ -196,8 +194,8 @@ class _DepositScreenState extends State<DepositScreen> {
           GlassCard(
             borderRadius: 14,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Icon(Icons.lock_outline, size: 16, color: AppColors.highlight),
                 SizedBox(width: 10),
                 Expanded(
