@@ -2,6 +2,9 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+configurations.all {
+        exclude group: 'com.google.android.gms', module: 'play-services-tapandpay'
+    }
     }
 }
 
