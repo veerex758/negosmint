@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// Chrome + cobalt-center coin with slow 3D-style rotation and a soft
+/// Copper + bronze-center coin with slow 3D-style rotation and a soft
 /// light sweep. No neon — reflections only.
 class AnimatedCoin extends StatefulWidget {
   const AnimatedCoin({super.key, this.size = 96});
@@ -51,10 +51,10 @@ class _AnimatedCoinState extends State<AnimatedCoin>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFFE7ECFF),
-                    Color(0xFFAFC8FF),
+                    Color(0xFFF4E0C9),
+                    AppColors.highlight,
                     AppColors.cobalt,
-                    Color(0xFFC9B8FF),
+                    AppColors.violet,
                   ],
                   stops: [0.0, 0.35, 0.7, 1.0],
                 ),

@@ -2,13 +2,14 @@
 
 **Earn. Achieve. Advance.**
 
-Implemented in Flutter/Dart with the Midnight Cobalt identity — no neon
-green anywhere. Covers the full original build plan except deposits (see
-"Not included" below).
+Implemented in Flutter/Dart with the Minted Copper identity — copper
+and bronze on obsidian navy. Covers the full original build plan; every
+feature including deposits (Stripe) is wired up (see "Not included"
+below for the small remaining gaps).
 
 ## What's included
 
-- **Theme** (`lib/core/theme`) — full Midnight Cobalt color system + dark
+- **Theme** (`lib/core/theme`) — full Minted Copper color system + dark
   `ThemeData` (Inter via Google Fonts).
 - **Reusable widgets** (`lib/core/widgets`):
   - `GlassCard` — glassmorphism panel with entrance (fade+slide+scale) and
@@ -135,7 +136,7 @@ reading in full, but the short version:
    changes to `android/` that I don't have access to generate myself
    (I've only ever touched `lib/`, `pubspec.yaml`, and `supabase/` in
    this project) — without these, the payment sheet will crash on
-   Android:
+   Android, or the release build will fail outright:
    - In `android/app/build.gradle`, under `defaultConfig`, set
      `minSdkVersion 21` (or higher).
    - In `android/app/src/main/kotlin/.../MainActivity.kt`, change the
@@ -149,15 +150,46 @@ reading in full, but the short version:
      `values-night/styles.xml`, make sure your theme's `parent` derives
      from `Theme.AppCompat.*` or `Theme.MaterialComponents.*` (not
      `Theme.Light.NoTitleBar` or similar).
-   - If your release build uses ProGuard/R8 (check for
-     `minifyEnabled true` in `android/app/build.gradle`), add to
-     `android/app/proguard-rules.pro`:
+   - **Required, not optional:** `flutter_stripe` transitively depends
+     on `com.stripe:stripe-android-issuing-push-provisioning`, which in
+     turn needs `com.google.android.gms:play-services-tapandpay` — a
+     Google artifact that's invite-only and won't resolve from public
+     Maven repos for most accounts. This is a known, currently
+     unresolved upstream issue
+     ([flutter_stripe#2252](https://github.com/flutter-stripe/flutter_stripe/issues/2252)),
+     not something specific to this project. Push provisioning (adding
+     a card directly to the Google Pay wallet from inside the app) is a
+     separate feature from accepting payments and isn't used here, so
+     the fix is to tell Gradle not to resolve it at all. In the
+     **project-level** `android/build.gradle` (the one at `android/`,
+     not `android/app/`), add inside (or alongside) the existing
+     `allprojects` block:
+     ```gradle
+     allprojects {
+         configurations.all {
+             exclude group: 'com.google.android.gms', module: 'play-services-tapandpay'
+         }
+     }
      ```
-     -dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivity$g
-     -dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter$Args
-     -dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter$Error
-     -dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter
-     -dontwarn com.stripe.android.pushProvisioning.PushProvisioningEphemeralKeyProvider
+   - In `android/app/proguard-rules.pro`, add:
+     ```
+     -dontwarn com.stripe.android.pushProvisioning.**
+     -dontwarn com.google.android.gms.tapandpay.**
+     -dontwarn kotlinx.parcelize.Parceler$DefaultImpls
+     -dontwarn kotlinx.parcelize.Parceler
+     -dontwarn kotlinx.parcelize.Parcelize
+     -keep class com.stripe.** { *; }
+     ```
+     These matter even if `minifyEnabled` looks like it's off somewhere
+     — several build variants enable it independently, and the lint/R8
+     tasks that hit this exact failure run during a normal
+     `flutter build apk --release`.
+   - After any of the above, run a full clean rebuild — hot reload/hot
+     restart won't pick up native Gradle changes:
+     ```bash
+     flutter clean
+     cd android && ./gradlew clean && cd ..
+     flutter pub get
      ```
 
 **What's covered by "all methods":** the PaymentIntent is created with
