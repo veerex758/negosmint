@@ -3,10 +3,6 @@ allprojects {
         google()
         mavenCentral()
     }
-
-    configurations.all {
-        exclude(group = "com.google.android.gms", module = "play-services-tapandpay")
-    }
 }
 
 val newBuildDir: Directory =
