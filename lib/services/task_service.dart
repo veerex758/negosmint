@@ -21,23 +21,22 @@ class TaskService {
         .toList();
   }
 
-  /// Creates the task_submissions row that complete_task() will later
-  /// look up. The `unique (task_id, user_id)` constraint on that table
-  /// means a second call for the same task simply fails instead of
-  /// letting someone start it twice.
-  Future<String> startTask(String taskId) async {
-    final row = await supabase
-        .from('task_submissions')
-        .insert({'task_id': taskId})
-        .select()
-        .single();
-    return row['id'] as String;
+  /// Reserves an inventory slot server-side. The database locks the task row
+  /// and assigns an expiry, so a client cannot overbook a campaign.
+  Future<TaskSubmission> startTask(String taskId) async {
+    final row = await supabase.rpc('reserve_task_slot', params: {'p_task_id': taskId});
+    return TaskSubmission.fromMap(row as Map<String, dynamic>);
   }
 
-  Future<void> completeTask(String submissionId) {
-    return supabase.rpc('complete_task', params: {
+  /// Submits user-entered proof for the verification pipeline. Rewards are
+  /// only credited by the server after automated or human verification.
+  Future<String> submitProof({required String submissionId, String? proofText, String? proofImageUrl}) async {
+    final status = await supabase.rpc('submit_task_proof', params: {
       'p_submission_id': submissionId,
+      'p_proof_text': proofText,
+      'p_proof_image_url': proofImageUrl,
     });
+    return status as String;
   }
 
   Future<int> fetchCompletedCount(String userId) async {

@@ -15,7 +15,7 @@ class TasksScreen extends StatefulWidget {
 
 class _TasksScreenState extends State<TasksScreen> {
   final _categories = const [
-    'All', 'Surveys', 'Apps', 'Social', 'Videos', 'Offers', 'Other'
+    'All', 'Instant-Approve', 'Social Growth', 'Product & App Testing', 'Pro Micro-Gigs'
   ];
   String _selected = 'All';
 

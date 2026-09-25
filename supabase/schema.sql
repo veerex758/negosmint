@@ -89,7 +89,7 @@ create view public.wallet_balances as
 select
   user_id,
   coalesce(sum(amount) filter (where status = 'completed'), 0) as available,
-  coalesce(sum(amount) filter (where status = 'pending'), 0) as pending,
+  coalesce(sum(amount) filter (where status = 'pending' and amount > 0), 0) as pending,
   coalesce(sum(amount) filter (
     where status = 'completed' and amount > 0
   ), 0) as lifetime_earned
@@ -402,3 +402,141 @@ insert into public.tasks (title, description, category, reward, minutes) values
   ('Follow & Share', 'Follow and share a partner social post.', 'Social', 0.75, 3),
   ('Watch Short Video', 'Watch a short sponsored video to completion.', 'Videos', 0.40, 2),
   ('Sign Up Offer', 'Complete a partner sign-up offer.', 'Offers', 4.00, 15);
+
+-- ============================================================================
+-- 10. BLUEPRINT UPGRADE: reservations, verification, trust, and campaigns
+-- ============================================================================
+-- Proof is submitted only through submit_task_proof(). Clients can no longer
+-- create arbitrary submissions or change their state directly.
+drop policy if exists "Users can start a task" on public.task_submissions;
+
+alter table public.profiles
+  add column if not exists country_code text,
+  add column if not exists currency_code text not null default 'USD',
+  add column if not exists device_fingerprint_hash text;
+create unique index if not exists profiles_device_fingerprint_unique
+  on public.profiles (device_fingerprint_hash) where device_fingerprint_hash is not null;
+
+create table if not exists public.user_trust_profiles (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  current_level integer not null default 1 check (current_level between 1 and 4),
+  trust_score integer not null default 100 check (trust_score between 0 and 1000),
+  total_completed_tasks integer not null default 0,
+  total_rejected_tasks integer not null default 0,
+  yield_multiplier numeric(3,2) not null default 1.00,
+  updated_at timestamptz not null default now()
+);
+alter table public.user_trust_profiles enable row level security;
+create policy "Users can view their own trust profile" on public.user_trust_profiles
+  for select using (auth.uid() = user_id);
+
+alter table public.tasks
+  add column if not exists advertiser_id uuid references public.profiles(id),
+  add column if not exists advertiser_name text,
+  add column if not exists advertiser_rating numeric(2,1),
+  add column if not exists total_slots integer check (total_slots > 0),
+  add column if not exists remaining_slots integer check (remaining_slots >= 0),
+  add column if not exists reservation_minutes integer not null default 20 check (reservation_minutes between 15 and 30),
+  add column if not exists verification_mode text not null default 'manual' check (verification_mode in ('instant', 'manual')),
+  add column if not exists minimum_trust_level integer not null default 1 check (minimum_trust_level between 1 and 4),
+  add column if not exists proof_criteria jsonb not null default '{}'::jsonb;
+
+alter table public.task_submissions
+  add column if not exists proof_text text,
+  add column if not exists proof_image_url text,
+  add column if not exists image_hash varchar(256),
+  add column if not exists ocr_extracted_data jsonb,
+  add column if not exists ai_confidence_score numeric(5,2),
+  add column if not exists rejection_reason text,
+  add column if not exists reserved_until timestamptz,
+  add column if not exists submitted_at timestamptz,
+  add column if not exists started_at timestamptz not null default now();
+create unique index if not exists task_submission_image_hash_unique
+  on public.task_submissions(image_hash) where image_hash is not null;
+
+create table if not exists public.campaign_escrow (
+  campaign_id uuid primary key references public.tasks(id) on delete cascade,
+  advertiser_id uuid not null references public.profiles(id),
+  total_budget numeric(12,2) not null check (total_budget > 0),
+  escrow_remaining numeric(12,2) not null check (escrow_remaining >= 0),
+  platform_fee_rate numeric(4,2) not null default .15 check (platform_fee_rate between .15 and .20),
+  featured boolean not null default false,
+  express_verification boolean not null default false,
+  status text not null default 'active' check (status in ('draft', 'active', 'paused', 'completed')),
+  created_at timestamptz not null default now()
+);
+alter table public.campaign_escrow enable row level security;
+create policy "Advertisers can view their campaigns" on public.campaign_escrow for select using (auth.uid() = advertiser_id);
+
+-- Atomically reserve campaign inventory and reject users below the campaign's
+-- Mint Rank. A scheduled cleanup releases expired reservations back to inventory.
+create or replace function public.reserve_task_slot(p_task_id uuid)
+returns public.task_submissions
+language plpgsql security definer set search_path = public as $$
+declare v_task public.tasks%rowtype; v_trust public.user_trust_profiles%rowtype; v_submission public.task_submissions%rowtype;
+begin
+  select * into v_task from public.tasks where id = p_task_id and is_active for update;
+  if not found or (v_task.remaining_slots is not null and v_task.remaining_slots <= 0) then raise exception 'No task slots available'; end if;
+  select * into v_trust from public.user_trust_profiles where user_id = auth.uid();
+  if coalesce(v_trust.current_level, 1) < v_task.minimum_trust_level then raise exception 'Mint Rank is too low for this task'; end if;
+  if exists (select 1 from public.task_submissions where task_id = p_task_id and user_id = auth.uid()) then raise exception 'Task already started or completed'; end if;
+  insert into public.task_submissions(task_id,user_id,status,reserved_until,started_at)
+  values(p_task_id,auth.uid(),'in_progress',now() + make_interval(mins => v_task.reservation_minutes),now()) returning * into v_submission;
+  if v_task.remaining_slots is not null then update public.tasks set remaining_slots = remaining_slots - 1 where id=p_task_id; end if;
+  return v_submission;
+end; $$;
+
+-- A verification worker may populate OCR/hash/confidence after submission.
+-- This initial server gate provides an instant path only for no-image,
+-- high-confidence criteria; all other work remains in escrow for review.
+create or replace function public.submit_task_proof(p_submission_id uuid, p_proof_text text, p_proof_image_url text default null)
+returns text
+language plpgsql security definer set search_path = public as $$
+declare v_submission public.task_submissions%rowtype; v_task public.tasks%rowtype; v_status text; v_reward numeric;
+begin
+  select * into v_submission from public.task_submissions where id=p_submission_id and user_id=auth.uid() for update;
+  if not found then raise exception 'Submission not found'; end if;
+  if v_submission.status <> 'in_progress' or v_submission.reserved_until < now() then raise exception 'Task reservation has expired'; end if;
+  if coalesce(length(trim(p_proof_text)),0) = 0 and p_proof_image_url is null then raise exception 'Proof is required'; end if;
+  select * into v_task from public.tasks where id=v_submission.task_id;
+  v_status := case when v_task.verification_mode = 'instant' and p_proof_image_url is null then 'completed' else 'under_review' end;
+  update public.task_submissions set status=v_status, proof_text=p_proof_text, proof_image_url=p_proof_image_url, submitted_at=now(), reviewed_at=case when v_status='completed' then now() else null end where id=p_submission_id;
+  if v_status='completed' then
+    select v_task.reward * coalesce(yield_multiplier,1) into v_reward from public.user_trust_profiles where user_id=auth.uid();
+    insert into public.transactions(user_id,type,status,amount,description,reference_table,reference_id) values(auth.uid(),'task_reward','completed',v_reward,'Instant verification: '||v_task.title,'task_submissions',p_submission_id);
+    update public.user_trust_profiles set total_completed_tasks=total_completed_tasks+1, updated_at=now() where user_id=auth.uid();
+    return 'instant_approved';
+  end if;
+  insert into public.transactions(user_id,type,status,amount,description,reference_table,reference_id) values(auth.uid(),'task_reward','pending',v_task.reward,'Pending verification: '||v_task.title,'task_submissions',p_submission_id);
+  return 'pending_review';
+end; $$;
+
+-- Ensure every signup receives an independently visible trust profile.
+create or replace function public.bootstrap_trust_profile() returns trigger language plpgsql security definer set search_path=public as $$
+begin insert into public.user_trust_profiles(user_id) values(new.id) on conflict do nothing; return new; end; $$;
+drop trigger if exists profiles_create_trust_profile on public.profiles;
+create trigger profiles_create_trust_profile after insert on public.profiles for each row execute function public.bootstrap_trust_profile();
+
+-- Run this from a scheduled Supabase job to make expired reservations
+-- visible as expired and return their campaign inventory.
+create or replace function public.release_expired_task_reservations()
+returns integer language plpgsql security definer set search_path = public as $$
+declare v_count integer;
+begin
+  with expired as (
+    update public.task_submissions set status='expired'
+    where status='in_progress' and reserved_until < now()
+    returning task_id
+  ), restored as (
+    update public.tasks t set remaining_slots = t.remaining_slots + e.count
+    from (select task_id, count(*)::integer as count from expired group by task_id) e
+    where t.id=e.task_id and t.remaining_slots is not null
+    returning t.id
+  ) select count(*) into v_count from restored;
+  return coalesce(v_count, 0);
+end; $$;
+
+-- Current blueprint starter inventory.
+update public.tasks set category='Instant-Approve', verification_mode='instant', total_slots=500, remaining_slots=500, advertiser_name='Mint Labs', advertiser_rating=4.9 where title='Complete Survey';
+update public.tasks set category='Product & App Testing', total_slots=200, remaining_slots=200, advertiser_name='Product Studio', advertiser_rating=4.8 where title='Install & Try App';
+update public.tasks set category='Social Growth', total_slots=500, remaining_slots=500, advertiser_name='Growth Partner', advertiser_rating=4.7 where title='Follow & Share';

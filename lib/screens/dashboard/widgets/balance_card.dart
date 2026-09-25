@@ -8,12 +8,14 @@ class BalanceCard extends StatelessWidget {
   const BalanceCard({
     super.key,
     required this.balance,
+    required this.pendingBalance,
     required this.weeklyChangePct,
     this.onWithdraw,
     this.onWallet,
   });
 
   final double balance;
+  final double pendingBalance;
   final double weeklyChangePct;
   final VoidCallback? onWithdraw;
   final VoidCallback? onWallet;
@@ -33,7 +35,7 @@ class BalanceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Total Balance',
+                    const Text('Available balance',
                         style: TextStyle(
                             color: AppColors.textSecondary, fontSize: 13)),
                     const SizedBox(height: 6),
@@ -44,6 +46,11 @@ class BalanceCard extends StatelessWidget {
                         fontSize: 34,
                         fontWeight: FontWeight.w800,
                       ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Pending ledger · ₦${pendingBalance.toStringAsFixed(2)}',
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -84,7 +91,7 @@ class BalanceCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _ActionChip(
-                  label: 'Wallet',
+                  label: 'Earn More',
                   icon: Icons.account_balance_wallet_outlined,
                   filled: false,
                   onTap: onWallet,

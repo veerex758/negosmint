@@ -10,10 +10,12 @@ class TaskCompletionScreen extends StatefulWidget {
     super.key,
     required this.taskTitle,
     required this.reward,
+    required this.instantApproved,
   });
 
   final String taskTitle;
   final double reward;
+  final bool instantApproved;
 
   @override
   State<TaskCompletionScreen> createState() => _TaskCompletionScreenState();
@@ -130,8 +132,8 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                       opacity: _textIn.value.clamp(0.0, 1.0),
                       child: Column(
                         children: [
-                          const Text(
-                            'TASK COMPLETED',
+                          Text(
+                            widget.instantApproved ? 'TASK VERIFIED' : 'PROOF SUBMITTED',
                             style: TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 18,
@@ -159,8 +161,8 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                             duration: const Duration(milliseconds: 300),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Added to your balance',
+                          Text(
+                            widget.instantApproved ? 'Auto-approved and added to your available balance' : 'Pending verification · escrow release within 24 hours',
                             style: TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,

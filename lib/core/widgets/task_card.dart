@@ -12,6 +12,12 @@ class TaskItem {
     this.id,
     this.description,
     this.requirements,
+    this.advertiserName,
+    this.advertiserRating,
+    this.totalSlots,
+    this.remainingSlots,
+    this.verificationMode = 'manual',
+    this.reservationMinutes = 20,
   });
 
   final String? id;
@@ -21,6 +27,15 @@ class TaskItem {
   final int minutes;
   final String? description;
   final String? requirements;
+  final String? advertiserName;
+  final double? advertiserRating;
+  final int? totalSlots;
+  final int? remainingSlots;
+  final String verificationMode;
+  final int reservationMinutes;
+
+  bool get isInstantApprove => verificationMode == 'instant';
+  String get approvalLabel => isInstantApprove ? 'Instant AI approve' : 'Proof review';
 
   /// No dedicated difficulty column in the DB — derived from estimated
   /// time, which is a reasonable enough proxy without inventing data.
@@ -38,6 +53,12 @@ class TaskItem {
         minutes: model.minutes,
         description: model.description,
         requirements: model.requirements,
+        advertiserName: model.advertiserName,
+        advertiserRating: model.advertiserRating,
+        totalSlots: model.totalSlots,
+        remainingSlots: model.remainingSlots,
+        verificationMode: model.verificationMode,
+        reservationMinutes: model.reservationMinutes,
       );
 }
 
@@ -102,7 +123,7 @@ class TaskCard extends StatelessWidget {
                               fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(width: 6),
-                    const Text('· High availability',
+                    Text('· ${task.approvalLabel}',
                         style: TextStyle(
                             color: AppColors.textSecondary, fontSize: 10)),
                   ],

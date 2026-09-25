@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../auth/login_screen.dart';
+import '../main_nav/main_nav_screen.dart';
+import '../../services/auth_service.dart';
+import '../../core/config/supabase_config.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -41,17 +44,15 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     _controller.forward();
-    Future.delayed(const Duration(milliseconds: 2200), () {
+    Future.delayed(const Duration(milliseconds: 800), () {
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 500),
-          pageBuilder: (_, anim, __) => FadeTransition(
-            opacity: anim,
-            child: const LoginScreen(),
-          ),
-        ),
-      );
+      final destination = SupabaseConfig.isConfigured && AuthService.instance.isSignedIn
+          ? const MainNavScreen()
+          : const LoginScreen();
+      Navigator.of(context).pushReplacement(PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (_, anim, __) => FadeTransition(opacity: anim, child: destination),
+      ));
     });
   }
 
@@ -120,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Earn. Achieve. Advance.',
+                          'Complete. Earn. Grow.',
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,

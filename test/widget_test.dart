@@ -11,8 +11,8 @@ void main() {
     expect(find.text('NEGOSMINT'), findsOneWidget);
 
     // The splash screen schedules a Future.delayed to auto-navigate to
-    // LoginScreen. Advance the (fake) clock past that so the test doesn't
+    // LoginScreen. Advance the (fake) clock past the splash delay so the test doesn't
     // end with a pending timer, which flutter_test treats as a failure.
-    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 1200));
   });
 }

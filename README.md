@@ -1,15 +1,15 @@
 # NegosMint (Flutter)
 
-**Earn. Achieve. Advance.**
+**Complete. Earn. Grow.**
 
-Implemented in Flutter/Dart with the Minted Copper identity — copper
-and bronze on obsidian navy. Covers the full original build plan; every
-feature including deposits (Stripe) is wired up (see "Not included"
-below for the small remaining gaps).
+Implemented in Flutter/Dart with the vault-green NegosMint identity. The
+updated earning flow reserves campaign inventory, collects proof, and sends
+it through a server-owned verification and escrow path rather than crediting
+rewards from the client.
 
 ## What's included
 
-- **Theme** (`lib/core/theme`) — full Minted Copper color system + dark
+- **Theme** (`lib/core/theme`) — vault-green, sage, and sage-gold system + dark
   `ThemeData` (Inter via Google Fonts).
 - **Reusable widgets** (`lib/core/widgets`):
   - `GlassCard` — glassmorphism panel with entrance (fade+slide+scale) and
@@ -37,8 +37,8 @@ below for the small remaining gaps).
 1. Create a project at supabase.com.
 2. Open the SQL editor and run `supabase/schema.sql` top to bottom. It
    creates every table, the wallet ledger view, RLS policies, and the
-   `complete_task()` / `request_withdrawal()` functions that do
-   server-side reward validation (see comments in that file for why).
+   `reserve_task_slot()` / `submit_task_proof()` / `request_withdrawal()` functions that do
+   server-side slot reservation, proof verification routing, escrow, and reward validation.
 3. Run `supabase/admin_migration.sql` next (same SQL editor, new query).
    It adds everything the admin dashboard needs — suspension support,
    admin RLS policies, and the approve/reject-withdrawal functions.
@@ -216,7 +216,7 @@ does the work and the other is a no-op.
   Privacy are all placeholder menu items).
 
 Everything else — sign up, sign in, browsing tasks, task details,
-starting/completing tasks, wallet balance and history, deposits (Stripe),
+slot reservation and proof submission, wallet balance and history, deposits (Stripe),
 withdrawals, referral code/stats/sharing, notifications, profile stats
 and Level/XP, logout, the dashboard's weekly change %, the earnings
 chart's 7D/1M/3M/1Y series, the admin dashboard (analytics, withdrawal
