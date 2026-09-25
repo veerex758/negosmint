@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
+import '../../core/widgets/diagnostic_display.dart';
 import '../auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -37,11 +38,20 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _textOpacity =
       CurvedAnimation(parent: _controller, curve: const Interval(0.55, 0.85));
 
+  Object? _navigationError;
+  bool _navigating = false;
+
   @override
   void initState() {
     super.initState();
     _controller.forward();
-    Future.delayed(const Duration(milliseconds: 2200), () {
+    Future.delayed(const Duration(milliseconds: 2200), _navigateToLogin);
+  }
+
+  void _navigateToLogin() {
+    if (!mounted || _navigating) return;
+    setState(() => _navigating = true);
+    try {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
@@ -52,7 +62,14 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
       );
-    });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _navigationError = error;
+          _navigating = false;
+        });
+      }
+    }
   }
 
   @override
@@ -63,6 +80,16 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_navigationError != null) {
+      return DiagnosticDisplay(
+        title: 'Unable to continue',
+        message: 'NegosMint could not open the next screen. '
+            'Please retry to continue.\n\n'
+            'Diagnostic: ${_navigationError.runtimeType}',
+        retryLabel: 'Retry navigation',
+        onRetry: _navigateToLogin,
+      );
+    }
     return Scaffold(
       body: ParticleBackground(
         particleCount: 18,
