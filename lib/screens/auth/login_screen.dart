@@ -109,8 +109,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 24),
                   Row(
                     children: [
-                      Image.asset('assets/images/logo.png',
-                          width: 32, height: 32),
+                      ColorFiltered(
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFF22C55E),
+                          BlendMode.hue,
+                        ),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 32,
+                          height: 32,
+                          cacheWidth: 64,
+                          cacheHeight: 64,
+                        ),
+                      ),
                       const SizedBox(width: 10),
                       ShaderMask(
                         shaderCallback: (b) =>
