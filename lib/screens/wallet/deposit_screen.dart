@@ -33,11 +33,22 @@ class _DepositScreenState extends State<DepositScreen> {
   }
 
   Future<void> _startDeposit() async {
-    final amount = double.tryParse(_amountController.text);
-    if (amount == null || amount <= 0) {
+    final parsedAmount = double.tryParse(_amountController.text.trim());
+    if (parsedAmount == null || !parsedAmount.isFinite || parsedAmount <= 0) {
       setState(() => _amountError = 'Enter a valid amount');
       return;
     }
+    final amountInCents = (parsedAmount * 100).round();
+    if ((parsedAmount * 100 - amountInCents).abs() > 0.000001) {
+      setState(
+        () => _amountError =
+            'Enter an amount with no more than 2 decimal places',
+      );
+      return;
+    }
+    // Send the decimal dollar value the Edge Function expects, normalized to
+    // cents so a floating-point input cannot create a fractional cent.
+    final amount = amountInCents / 100;
     if (amount < minimumDeposit) {
       setState(() => _amountError =
           'Minimum deposit is \$${minimumDeposit.toStringAsFixed(2)}');
@@ -77,44 +88,61 @@ class _DepositScreenState extends State<DepositScreen> {
 
       await Stripe.instance.presentPaymentSheet();
 
-      // The sheet closing without throwing means Stripe's client SDK
-      // saw success — but the server re-verifies before crediting
-      // anything. See confirm-deposit/index.ts for why.
-      final credited =
-          await DepositService.instance.confirmDeposit(intent.paymentIntentId);
+      // A closed PaymentSheet confirms the payment with Stripe, not the
+      // wallet credit. Refresh only server-owned data; stripe-webhook is the
+      // authoritative path that credits the deposit asynchronously.
+      var refreshed = true;
+      try {
+        await DepositService.instance.refreshAuthoritativeData();
+      } catch (_) {
+        // The payment has already been confirmed by Stripe. Keep the user out
+        // of a duplicate-payment retry flow if this non-authoritative refresh
+        // happens to lose network connectivity.
+        refreshed = false;
+      }
 
       if (!mounted) return;
-      if (credited) {
-        setState(() {
-          _depositedAmount = amount;
-          _step = _DepositStep.submitted;
-          _processing = false;
-        });
-      } else {
-        setState(() => _processing = false);
+      setState(() {
+        _depositedAmount = amount;
+        _step = _DepositStep.submitted;
+        _processing = false;
+      });
+      if (!refreshed) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text(
-                  "Payment is still processing — check back in a moment.")),
+            content: Text(
+              'Payment confirmed. Wallet data will update when you refresh.',
+            ),
+          ),
         );
       }
     } on StripeException catch (e) {
       if (!mounted) return;
       setState(() => _processing = false);
-      // FailureCode.Canceled means the user closed the sheet themselves
-      // — not an error worth showing as one.
-      if (e.error.code != FailureCode.Canceled) {
+      if (e.error.code == FailureCode.Canceled) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.error.localizedMessage ?? 'Payment failed.')),
+          const SnackBar(content: Text('Payment cancelled.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.error.localizedMessage ?? 'Payment failed.'),
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _processing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong. Try again.')),
+        SnackBar(content: Text(_errorMessage(e))),
       );
     }
+  }
+
+  String _errorMessage(Object error) {
+    if (error is DepositException) return error.message;
+    return 'Could not contact the payment service. '
+        'Check your connection and try again.';
   }
 
   @override
@@ -243,14 +271,16 @@ class _DepositScreenState extends State<DepositScreen> {
               child: const Icon(Icons.check, color: AppColors.background, size: 44),
             ),
             const SizedBox(height: 20),
-            const Text('Deposit Successful',
+            const Text('Payment received',
                 style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              '\$${_depositedAmount.toStringAsFixed(2)} added to your wallet',
+              '\$${_depositedAmount.toStringAsFixed(2)} payment confirmed. '
+              'Your wallet will update after Stripe processes the deposit.',
+              textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 28),
