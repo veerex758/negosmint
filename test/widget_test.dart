@@ -10,9 +10,12 @@ void main() {
     // Splash screen renders the NEGOSMINT wordmark before navigating away.
     expect(find.text('NEGOSMINT'), findsOneWidget);
 
-    // The splash screen schedules a Future.delayed to auto-navigate to
-    // LoginScreen. Advance the (fake) clock past that so the test doesn't
-    // end with a pending timer, which flutter_test treats as a failure.
+    // The splash screen schedules an automatic route transition to the
+    // vault-green login header and its overlapping cream form sheet.
     await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome back!'), findsOneWidget);
+    expect(find.text('Sign in to your account'), findsOneWidget);
   });
 }
