@@ -3,16 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:negosmint/main.dart';
 
 void main() {
-  testWidgets('App boots and shows the splash screen',
+  testWidgets('App boots and reaches the login screen',
       (WidgetTester tester) async {
     await tester.pumpWidget(const NegosMintApp());
 
     // Splash screen renders the NEGOSMINT wordmark before navigating away.
     expect(find.text('NEGOSMINT'), findsOneWidget);
 
-    // The splash screen schedules a Future.delayed to auto-navigate to
-    // LoginScreen. Advance the (fake) clock past that so the test doesn't
-    // end with a pending timer, which flutter_test treats as a failure.
-    await tester.pump(const Duration(milliseconds: 2500));
+    // Advance through the splash and its route transition so the test proves
+    // the app reaches an interactive screen rather than remaining stuck.
+    await tester.pump(const Duration(milliseconds: 2200));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Welcome back'), findsOneWidget);
   });
 }

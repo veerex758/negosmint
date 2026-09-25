@@ -35,12 +35,18 @@ class _ParticleBackgroundState extends State<ParticleBackground>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 20),
-  )..repeat();
+  );
 
   late final List<_Particle> _particles = List.generate(
     widget.particleCount,
     (_) => _Particle(Random()),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.particleCount > 0) _controller.repeat();
+  }
 
   @override
   void dispose() {

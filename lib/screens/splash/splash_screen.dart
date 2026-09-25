@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
@@ -12,6 +14,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
+  Timer? _navigationTimer;
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1600),
@@ -41,22 +44,25 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     _controller.forward();
-    Future.delayed(const Duration(milliseconds: 2200), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 500),
-          pageBuilder: (_, anim, __) => FadeTransition(
-            opacity: anim,
-            child: const LoginScreen(),
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _navigationTimer = Timer(const Duration(milliseconds: 2200), () {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 500),
+            pageBuilder: (_, animation, __) => FadeTransition(
+              opacity: animation,
+              child: const LoginScreen(),
+            ),
           ),
-        ),
-      );
+        );
+      });
     });
   }
 
   @override
   void dispose() {
+    _navigationTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -65,7 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: ParticleBackground(
-        particleCount: 18,
+        particleCount: 0,
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, _) {
@@ -91,10 +97,18 @@ class _SplashScreenState extends State<SplashScreen>
                               ),
                             ),
                           ),
-                          Image.asset(
-                            'assets/images/logo.png',
-                            width: 112,
-                            height: 112,
+                          ColorFiltered(
+                            colorFilter: const ColorFilter.mode(
+                              Color(0xFF22C55E),
+                              BlendMode.hue,
+                            ),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              width: 112,
+                              height: 112,
+                              cacheWidth: 224,
+                              cacheHeight: 224,
+                            ),
                           ),
                         ],
                       ),
