@@ -71,15 +71,15 @@ below for the small remaining gaps).
    Log out and back in — you'll see **Admin Dashboard** at the bottom of
    the Profile screen's menu.
 9. Grab your project's URL and anon key from Project Settings → API.
-10. Run locally with both passed in (add `STRIPE_PUBLISHABLE_KEY` too
-    once you've done the Stripe setup below):
+10. Run locally with both passed in. The supplied Stripe **test-mode**
+    publishable key is the app default; pass `STRIPE_PUBLISHABLE_KEY` only
+    when you need to override it for another Stripe account:
 
     ```bash
     flutter pub get
     flutter run \
       --dart-define=SUPABASE_URL=https://xxxx.supabase.co \
-      --dart-define=SUPABASE_ANON_KEY=eyJhbGciOi... \
-      --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_...
+      --dart-define=SUPABASE_ANON_KEY=eyJhbGciOi...
     ```
 
 11. For CI, add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
@@ -117,10 +117,9 @@ reading in full, but the short version:
    ```
    (You'll get the webhook secret in step 5 below — come back and set
    it after.)
-4. **Deploy the three functions:**
+4. **Deploy the two functions:**
    ```bash
    supabase functions deploy create-payment-intent
-   supabase functions deploy confirm-deposit
    supabase functions deploy stripe-webhook --no-verify-jwt
    ```
    The `--no-verify-jwt` on the webhook matters — Stripe calls that URL
@@ -132,11 +131,9 @@ reading in full, but the short version:
    Listen for `payment_intent.succeeded` and
    `payment_intent.payment_failed`. Copy the signing secret it gives you
    and run the `STRIPE_WEBHOOK_SECRET` command from step 3.
-6. **Required native Android setup.** `flutter_stripe` needs a few
-   changes to `android/` that I don't have access to generate myself
-   (I've only ever touched `lib/`, `pubspec.yaml`, and `supabase/` in
-   this project) — without these, the payment sheet will crash on
-   Android, or the release build will fail outright:
+6. **Required native Android setup.** `flutter_stripe` needs the following
+   Android settings; this project includes them so the PaymentSheet can run
+   and build for release:
    - In `android/app/build.gradle`, under `defaultConfig`, set
      `minSdkVersion 21` (or higher).
    - In `android/app/src/main/kotlin/.../MainActivity.kt`, change the
@@ -203,12 +200,12 @@ can configure without Xcode/native Android project access — see
 and [Google Pay](https://docs.page/flutter-stripe/flutter_stripe/googlepay)
 guides if you want those specifically.
 
-**Why two confirmation paths?** `confirm-deposit` is the fast path —
-called the instant the payment sheet closes, and gives the user
-immediate feedback. `stripe-webhook` is the safety net for when that
-call never happens (app killed, connection dropped right after paying).
-`credit_deposit()` is idempotent, so whichever one gets there first
-does the work and the other is a no-op.
+**Deposit completion is webhook-driven.** The Flutter app creates the
+PaymentIntent and presents Stripe's PaymentSheet, then re-fetches its wallet
+and deposit data. It never calls a function to credit the wallet or marks a
+deposit successful itself. `stripe-webhook` verifies the Stripe signature and
+calls `credit_deposit()` after Stripe reports `payment_intent.succeeded`; that
+function is idempotent, so duplicate webhook deliveries are safe.
 
 ## Not included yet (per the original phased plan)
 
@@ -249,7 +246,6 @@ supabase/
 ├── deposits.sql          # run 6th (deposits table + credit function)
 └── functions/            # deploy via Supabase CLI, see "Deposits" above
     ├── create-payment-intent/
-    ├── confirm-deposit/
     ├── stripe-webhook/
     └── _shared/cors.ts
 ```
