@@ -49,7 +49,7 @@ class BalanceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Pending ledger · ₦${pendingBalance.toStringAsFixed(2)}',
+                      'Pending ledger · ${pendingBalance.toStringAsFixed(2)}',
                       style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                     ),
                     const SizedBox(height: 6),
