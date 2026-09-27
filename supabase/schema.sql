@@ -132,7 +132,7 @@ create table public.task_submissions (
   -- Anti-fraud: a user can only ever hold ONE non-terminal submission per
   -- task, which blocks the "repeated task submissions" abuse pattern from
   -- spec §21 at the database level, not just in application code.
-  unique (task_id, user_id)
+  -- Terminal submissions may be retried; active states are constrained below.
 );
 
 alter table public.task_submissions enable row level security;
@@ -458,6 +458,7 @@ alter table public.task_submissions
   add column if not exists reserved_until timestamptz,
   add column if not exists submitted_at timestamptz,
   add column if not exists started_at timestamptz not null default now();
+drop index if exists public.task_submission_image_hash_unique;
 create unique index if not exists task_submission_image_hash_unique
   on public.task_submissions(image_hash) where image_hash is not null;
 
@@ -906,3 +907,9 @@ $$;
 
 -- Do not expose maintenance/admin settlement RPCs to anonymous clients.
 revoke execute on function public.release_expired_task_reservations() from public, anon, authenticated;
+
+
+-- Optional Supabase pg_cron maintenance job. Run only when pg_cron is enabled
+-- in the project. It expires abandoned reservations every five minutes.
+-- select cron.schedule('negosmint-expire-task-reservations', '*/5 * * * *',
+--   $$select public.release_expired_task_reservations();$$);
