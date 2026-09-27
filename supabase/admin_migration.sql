@@ -220,6 +220,8 @@ $$;
 -- request withdrawals. Existing balances/history remain visible (their
 -- own SELECT policies are untouched), only new actions are blocked.
 -- ---------------------------------------------------------------------------
+alter table public.task_submissions drop constraint if exists task_submissions_task_id_user_id_key;
+
 drop policy if exists "Users can start a task" on public.task_submissions;
 create policy "Users can start a task"
   on public.task_submissions for insert
