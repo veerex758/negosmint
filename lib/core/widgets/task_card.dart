@@ -18,6 +18,7 @@ class TaskItem {
     this.remainingSlots,
     this.verificationMode = 'manual',
     this.reservationMinutes = 20,
+    this.currencyCode = 'USD',
   });
 
   final String? id;
@@ -33,6 +34,7 @@ class TaskItem {
   final int? remainingSlots;
   final String verificationMode;
   final int reservationMinutes;
+  final String currencyCode;
 
   bool get isInstantApprove => verificationMode == 'instant';
   String get approvalLabel => isInstantApprove ? 'Instant approval' : 'Proof review';
@@ -59,6 +61,7 @@ class TaskItem {
         remainingSlots: model.remainingSlots,
         verificationMode: model.verificationMode,
         reservationMinutes: model.reservationMinutes,
+        currencyCode: model.currencyCode,
       );
 }
 
@@ -135,7 +138,31 @@ class TaskCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('+\$${task.reward.toStringAsFixed(2)}',
+              Text('${task.currencyCode == 'NGN' ? '₦' : '\
+                  style: const TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14)),
+              const SizedBox(height: 6),
+              busy
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(AppColors.highlight),
+                      ),
+                    )
+                  : const Icon(Icons.chevron_right_rounded,
+                      color: AppColors.textSecondary, size: 20),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+}${task.reward.toStringAsFixed(2)}',
                   style: const TextStyle(
                       color: AppColors.success,
                       fontWeight: FontWeight.w700,
