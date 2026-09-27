@@ -540,3 +540,358 @@ end; $$;
 update public.tasks set category='Instant-Approve', verification_mode='instant', total_slots=500, remaining_slots=500, advertiser_name='Mint Labs', advertiser_rating=4.9 where title='Complete Survey';
 update public.tasks set category='Product & App Testing', total_slots=200, remaining_slots=200, advertiser_name='Product Studio', advertiser_rating=4.8 where title='Install & Try App';
 update public.tasks set category='Social Growth', total_slots=500, remaining_slots=500, advertiser_name='Growth Partner', advertiser_rating=4.7 where title='Follow & Share';
+
+-- ============================================================================
+-- 11. SECURITY/ACCOUNTING HARDENING
+-- ============================================================================
+-- Terminal submissions may be retried; only one active submission is allowed
+-- for a user/task at a time.
+alter table public.task_submissions
+  drop constraint if exists task_submissions_task_id_user_id_key;
+create unique index if not exists task_submissions_one_active_per_user_task
+  on public.task_submissions(task_id, user_id)
+  where status in ('in_progress', 'submitted', 'under_review');
+
+-- Do not let an old public RPC remain as a second reward-credit path.
+revoke execute on function public.complete_task(uuid) from public, anon, authenticated;
+
+create or replace function public.reserve_task_slot(p_task_id uuid)
+returns public.task_submissions
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_task public.tasks%rowtype;
+  v_trust public.user_trust_profiles%rowtype;
+  v_submission public.task_submissions%rowtype;
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+
+  select * into v_task
+  from public.tasks
+  where id = p_task_id and is_active
+  for update;
+
+  if not found then raise exception 'Task is unavailable'; end if;
+  if v_task.remaining_slots is not null and v_task.remaining_slots <= 0 then
+    raise exception 'No task slots available';
+  end if;
+
+  if exists (
+    select 1 from public.profiles
+    where id = auth.uid() and coalesce(is_suspended, false)
+  ) then
+    raise exception 'Account is suspended';
+  end if;
+
+  select * into v_trust
+  from public.user_trust_profiles
+  where user_id = auth.uid();
+
+  if coalesce(v_trust.current_level, 1) < v_task.minimum_trust_level then
+    raise exception 'Mint Rank is too low for this task';
+  end if;
+
+  begin
+    insert into public.task_submissions(task_id, user_id, status, reserved_until, started_at)
+    values (
+      p_task_id, auth.uid(), 'in_progress',
+      now() + make_interval(mins => v_task.reservation_minutes), now()
+    )
+    returning * into v_submission;
+  exception when unique_violation then
+    raise exception 'Task already started or is awaiting review';
+  end;
+
+  if v_task.remaining_slots is not null then
+    update public.tasks
+    set remaining_slots = remaining_slots - 1
+    where id = p_task_id;
+  end if;
+
+  return v_submission;
+end;
+$$;
+
+create or replace function public.submit_task_proof(
+  p_submission_id uuid,
+  p_proof_text text,
+  p_proof_image_url text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_submission public.task_submissions%rowtype;
+  v_task public.tasks%rowtype;
+  v_escrow public.campaign_escrow%rowtype;
+  v_reward numeric;
+  v_status public.submission_status;
+  v_criteria jsonb;
+  v_exact text;
+  v_contains jsonb;
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+
+  select * into v_submission
+  from public.task_submissions
+  where id = p_submission_id and user_id = auth.uid()
+  for update;
+
+  if not found then raise exception 'Submission not found'; end if;
+  if v_submission.status <> 'in_progress'
+     or v_submission.reserved_until is null
+     or v_submission.reserved_until <= now() then
+    raise exception 'Task reservation has expired';
+  end if;
+
+  if coalesce(length(trim(p_proof_text)), 0) = 0
+     and p_proof_image_url is null then
+    raise exception 'Proof is required';
+  end if;
+
+  select * into v_task from public.tasks where id = v_submission.task_id;
+  if not found or not v_task.is_active then raise exception 'Task is unavailable'; end if;
+
+  v_criteria := coalesce(v_task.proof_criteria, '{}'::jsonb);
+  v_status := 'under_review';
+
+  -- "Instant" is allowed only when the campaign explicitly defines a
+  -- deterministic text rule and the submitted text satisfies it. An empty
+  -- proof_criteria object can never auto-approve a reward.
+  if v_task.verification_mode = 'instant' and p_proof_image_url is null then
+    v_exact := nullif(trim(v_criteria ->> 'exact_text'), '');
+    v_contains := v_criteria -> 'contains';
+
+    if v_exact is not null and trim(coalesce(p_proof_text, '')) = v_exact then
+      v_status := 'completed';
+    elsif jsonb_typeof(v_contains) = 'array'
+      and jsonb_array_length(v_contains) > 0
+      and not exists (
+        select 1
+        from jsonb_array_elements_text(v_contains) required
+        where position(lower(required) in lower(coalesce(p_proof_text, ''))) = 0
+      ) then
+      v_status := 'completed';
+    end if;
+  end if;
+
+  if v_status = 'completed' then
+    select * into v_escrow
+    from public.campaign_escrow
+    where campaign_id = v_task.id
+      and status = 'active'
+    for update;
+
+    if not found then
+      raise exception 'Campaign escrow is not funded';
+    end if;
+
+    select v_task.reward * coalesce(utp.yield_multiplier, 1.00)
+      into v_reward
+    from public.user_trust_profiles utp
+    where utp.user_id = auth.uid();
+
+    v_reward := coalesce(v_reward, v_task.reward);
+
+    if v_escrow.escrow_remaining < v_reward then
+      raise exception 'Campaign escrow is insufficient';
+    end if;
+
+    update public.campaign_escrow
+    set escrow_remaining = escrow_remaining - v_reward,
+        status = case when escrow_remaining - v_reward = 0 then 'completed' else status end
+    where campaign_id = v_task.id;
+
+    update public.task_submissions
+    set status = 'completed',
+        proof_text = p_proof_text,
+        proof_image_url = p_proof_image_url,
+        submitted_at = now(),
+        reviewed_at = now()
+    where id = p_submission_id;
+
+    insert into public.transactions(
+      user_id, type, status, amount, description, reference_table, reference_id
+    )
+    values (
+      auth.uid(), 'task_reward', 'completed', v_reward,
+      'Instant verification: ' || v_task.title,
+      'task_submissions', p_submission_id
+    );
+
+    update public.user_trust_profiles
+    set total_completed_tasks = total_completed_tasks + 1, updated_at = now()
+    where user_id = auth.uid();
+
+    return 'instant_approved';
+  end if;
+
+  -- Manual/failed instant verification enters review. Hold the reward in
+  -- campaign escrow now so concurrent approvals cannot overspend it.
+  select * into v_escrow
+  from public.campaign_escrow
+  where campaign_id = v_task.id and status = 'active'
+  for update;
+
+  if not found or v_escrow.escrow_remaining < v_task.reward then
+    raise exception 'Campaign escrow is insufficient';
+  end if;
+
+  update public.campaign_escrow
+  set escrow_remaining = escrow_remaining - v_task.reward
+  where campaign_id = v_task.id;
+
+  update public.task_submissions
+  set status = 'under_review',
+      proof_text = p_proof_text,
+      proof_image_url = p_proof_image_url,
+      submitted_at = now()
+  where id = p_submission_id;
+
+  insert into public.transactions(
+    user_id, type, status, amount, description, reference_table, reference_id
+  )
+  values (
+    auth.uid(), 'task_reward', 'pending', v_task.reward,
+    'Pending verification: ' || v_task.title,
+    'task_submissions', p_submission_id
+  );
+
+  return 'pending_review';
+end;
+$$;
+
+-- Admin-only atomic settlement for manually reviewed submissions.
+create or replace function public.approve_task_submission(p_submission_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_submission public.task_submissions%rowtype;
+begin
+  if not public.is_admin() then raise exception 'Not authorized'; end if;
+
+  select * into v_submission
+  from public.task_submissions
+  where id = p_submission_id
+  for update;
+
+  if not found then raise exception 'Submission not found'; end if;
+  if v_submission.status <> 'under_review' then
+    raise exception 'Submission is not awaiting review';
+  end if;
+
+  update public.task_submissions
+  set status = 'completed', reviewed_at = now()
+  where id = p_submission_id;
+
+  update public.transactions
+  set status = 'completed'
+  where reference_table = 'task_submissions'
+    and reference_id = p_submission_id
+    and type = 'task_reward'
+    and status = 'pending';
+
+  update public.user_trust_profiles
+  set total_completed_tasks = total_completed_tasks + 1, updated_at = now()
+  where user_id = v_submission.user_id;
+
+  return 'approved';
+end;
+$$;
+
+create or replace function public.reject_task_submission(
+  p_submission_id uuid,
+  p_reason text default 'Proof did not meet the campaign criteria'
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_submission public.task_submissions%rowtype;
+  v_task public.tasks%rowtype;
+  v_tx public.transactions%rowtype;
+begin
+  if not public.is_admin() then raise exception 'Not authorized'; end if;
+
+  select * into v_submission
+  from public.task_submissions
+  where id = p_submission_id
+  for update;
+
+  if not found then raise exception 'Submission not found'; end if;
+  if v_submission.status <> 'under_review' then
+    raise exception 'Submission is not awaiting review';
+  end if;
+
+  select * into v_task from public.tasks where id = v_submission.task_id;
+
+  update public.task_submissions
+  set status = 'rejected', rejection_reason = p_reason, reviewed_at = now()
+  where id = p_submission_id;
+
+  select * into v_tx
+  from public.transactions
+  where reference_table = 'task_submissions'
+    and reference_id = p_submission_id
+    and type = 'task_reward'
+    and status = 'pending'
+  for update;
+
+  if found then
+    update public.transactions set status = 'reversed' where id = v_tx.id;
+    update public.campaign_escrow
+    set escrow_remaining = escrow_remaining + v_tx.amount,
+        status = case when status = 'completed' then 'active' else status end
+    where campaign_id = v_task.id;
+  end if;
+
+  update public.user_trust_profiles
+  set total_rejected_tasks = total_rejected_tasks + 1, updated_at = now()
+  where user_id = v_submission.user_id;
+
+  return 'rejected';
+end;
+$$;
+
+create or replace function public.release_expired_task_reservations()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count integer;
+begin
+  with expired as (
+    update public.task_submissions
+    set status = 'expired'
+    where status = 'in_progress'
+      and reserved_until is not null
+      and reserved_until < now()
+    returning task_id
+  ), restored as (
+    update public.tasks t
+    set remaining_slots = t.remaining_slots + e.count
+    from (
+      select task_id, count(*)::integer as count
+      from expired group by task_id
+    ) e
+    where t.id = e.task_id and t.remaining_slots is not null
+    returning t.id
+  )
+  select coalesce((select count(*) from expired), 0) into v_count;
+  return v_count;
+end;
+$$;
+
+-- Do not expose maintenance/admin settlement RPCs to anonymous clients.
+revoke execute on function public.release_expired_task_reservations() from public, anon, authenticated;
