@@ -1,9 +1,9 @@
 import 'supabase_client.dart';
 import '../models/task_model.dart';
 
-/// Reward-crediting always goes through `complete_task()` (see
-/// supabase/schema.sql) — a SECURITY DEFINER Postgres function — rather
-/// than this service writing to `transactions` itself. A user's own
+/// Reward-crediting always goes through the server-side verification RPCs
+/// (`submit_task_proof` and admin review functions). This client never writes
+/// directly to the wallet ledger. A user's own
 /// client has no insert policy on that table, so there's no client-side
 /// path to crediting an arbitrary reward.
 class TaskService {
