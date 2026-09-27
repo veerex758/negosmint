@@ -270,10 +270,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    GlassCard(
+                    const GlassCard(
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                        children: <Widget>[
                           const Icon(Icons.shield_outlined, color: AppColors.warning),
                           const SizedBox(width: 10),
                           const Expanded(
