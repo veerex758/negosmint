@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/diagnostic_display.dart';
 import '../../core/widgets/particle_background.dart';
 import '../auth/login_screen.dart';
 import '../main_nav/main_nav_screen.dart';
@@ -15,6 +16,9 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
+  Object? _navigationError;
+  bool _navigating = false;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1600),
@@ -44,16 +48,32 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
     _controller.forward();
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (!mounted) return;
-      final destination = SupabaseConfig.isConfigured && AuthService.instance.isSignedIn
-          ? const MainNavScreen()
-          : const LoginScreen();
-      Navigator.of(context).pushReplacement(PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (_, anim, __) => FadeTransition(opacity: anim, child: destination),
-      ));
-    });
+    Future.delayed(const Duration(milliseconds: 800), _navigate);
+  }
+
+  void _navigate() {
+    if (!mounted || _navigating) return;
+    setState(() => _navigating = true);
+    try {
+      final destination =
+          SupabaseConfig.isConfigured && AuthService.instance.isSignedIn
+              ? const MainNavScreen()
+              : const LoginScreen();
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 350),
+          pageBuilder: (_, anim, __) =>
+              FadeTransition(opacity: anim, child: destination),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _navigationError = error;
+          _navigating = false;
+        });
+      }
+    }
   }
 
   @override
@@ -64,6 +84,17 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_navigationError != null) {
+      return DiagnosticDisplay(
+        title: 'Unable to continue',
+        message: 'NegosMint could not open the next screen. '
+            'Please retry to continue.\n\n'
+            'Diagnostic: ${_navigationError.runtimeType}',
+        retryLabel: 'Retry navigation',
+        onRetry: _navigate,
+      );
+    }
+
     return Scaffold(
       body: ParticleBackground(
         particleCount: 18,
