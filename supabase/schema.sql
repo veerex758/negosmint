@@ -780,6 +780,20 @@ begin
 end;
 $$;
 
+-- Central admin gate used by settlement RPCs.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $
+  select coalesce((select is_admin from public.profiles where id = auth.uid()), false);
+$;
+
+revoke execute on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
 -- Admin-only atomic settlement for manually reviewed submissions.
 create or replace function public.approve_task_submission(p_submission_id uuid)
 returns text
