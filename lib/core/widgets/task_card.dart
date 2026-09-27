@@ -35,7 +35,7 @@ class TaskItem {
   final int reservationMinutes;
 
   bool get isInstantApprove => verificationMode == 'instant';
-  String get approvalLabel => isInstantApprove ? 'Instant AI approve' : 'Proof review';
+  String get approvalLabel => isInstantApprove ? 'Instant approval' : 'Proof review';
 
   /// No dedicated difficulty column in the DB — derived from estimated
   /// time, which is a reasonable enough proxy without inventing data.
