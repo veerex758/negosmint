@@ -1,7 +1,8 @@
 /// Stripe publishable key. Same reasoning as SupabaseConfig — safe to ship
 /// in a client app (it can only create tokens/PaymentIntents your backend
-/// authorizes), but still passed at build time rather than hardcoded, so
-/// dev/staging/prod can use different Stripe accounts.
+/// authorizes). This default is the NegosMint Stripe **test-mode** key. A
+/// `--dart-define` can override it for a different test, staging, or live
+/// Stripe account without changing source code.
 ///
 ///   flutter run --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_...
 ///
@@ -13,7 +14,8 @@ class StripeConfig {
 
   static const String publishableKey = String.fromEnvironment(
     'STRIPE_PUBLISHABLE_KEY',
-    defaultValue: '',
+    defaultValue:
+        'pk_test_51UJWJ2GzbkKcFOab6kk0ezRJVVt47gjNJUoJATxD4Zh5CINdWeEPWRIvgHo3fTqPCcfifmjUFH6MpvWKFz4LXEKl000mE98xzP',
   );
 
   static bool get isConfigured => publishableKey.isNotEmpty;
