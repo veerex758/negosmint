@@ -19,6 +19,7 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   Object? _navigationError;
   bool _navigating = false;
+  bool _exiting = false;
 
   late final AnimationController _controller = AnimationController(
     vsync: this,
@@ -30,10 +31,43 @@ class _SplashScreenState extends State<SplashScreen>
     curve: Curves.outCirc,
   );
 
+  late final AnimationController _exitController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+  );
+
+  late final Animation<double> _exitOpacity = CurvedAnimation(
+    parent: _exitController,
+    curve: Curves.easeInCubic,
+  );
+
+  late final Animation<double> _exitScale = Tween<double>(
+    begin: 1,
+    end: 0.88,
+  ).animate(CurvedAnimation(
+    parent: _exitController,
+    curve: Curves.easeInCubic,
+  ));
+
+  late final Animation<double> _exitBlur = Tween<double>(
+    begin: 0,
+    end: 1,
+  ).animate(CurvedAnimation(
+    parent: _exitController,
+    curve: Curves.easeInCubic,
+  ));
+
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 2500), _navigate);
+    Future<void>.delayed(const Duration(milliseconds: 2200), _beginExit);
+  }
+
+  Future<void> _beginExit() async {
+    if (!mounted || _navigating || _exiting) return;
+    setState(() => _exiting = true);
+    await _exitController.forward();
+    if (mounted) _navigate();
   }
 
   void _navigate() {
@@ -56,8 +90,8 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Route<void> _loginRoute(Widget destination) => PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 650),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
+        transitionDuration: const Duration(milliseconds: 720),
+        reverseTransitionDuration: const Duration(milliseconds: 380),
         pageBuilder: (_, __, ___) => destination,
         transitionsBuilder: (_, animation, __, child) {
           final curved = CurvedAnimation(
@@ -69,10 +103,13 @@ class _SplashScreenState extends State<SplashScreen>
             opacity: curved,
             child: SlideTransition(
               position: Tween<Offset>(
-                begin: const Offset(0, 0.035),
+                begin: const Offset(0, 0.025),
                 end: Offset.zero,
               ).animate(curved),
-              child: child,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
+                child: child,
+              ),
             ),
           );
         },
@@ -81,6 +118,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _exitController.dispose();
     super.dispose();
   }
 
@@ -97,17 +135,7 @@ class _SplashScreenState extends State<SplashScreen>
       );
     }
 
-    return Scaffold(
-      backgroundColor: _vaultGreen,
-      body: Center(
-        child: FadeTransition(
-          opacity: _entrance,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.055),
-              end: Offset.zero,
-            ).animate(_entrance),
-            child: Column(
+    final content = Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const _MonogramEmblem(size: 126),
@@ -131,9 +159,31 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ],
-            ),
-          ),
-        ),
+            );
+
+    final entranceContent = FadeTransition(
+      opacity: _entrance,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.055),
+          end: Offset.zero,
+        ).animate(_entrance),
+        child: content,
+      ),
+    );
+
+    final exitingContent = FadeTransition(
+      opacity: Tween<double>(begin: 1, end: 0).animate(_exitOpacity),
+      child: ScaleTransition(
+        scale: _exitScale,
+        child: entranceContent,
+      ),
+    );
+
+    return Scaffold(
+      backgroundColor: _vaultGreen,
+      body: Center(
+        child: _exiting ? exitingContent : entranceContent,
       ),
     );
   }
