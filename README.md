@@ -120,7 +120,6 @@ reading in full, but the short version:
 4. **Deploy the three functions:**
    ```bash
    supabase functions deploy create-payment-intent
-   supabase functions deploy confirm-deposit
    supabase functions deploy stripe-webhook --no-verify-jwt
    ```
    The `--no-verify-jwt` on the webhook matters — Stripe calls that URL
@@ -249,7 +248,6 @@ supabase/
 ├── deposits.sql          # run 6th (deposits table + credit function)
 └── functions/            # deploy via Supabase CLI, see "Deposits" above
     ├── create-payment-intent/
-    ├── confirm-deposit/
     ├── stripe-webhook/
     └── _shared/cors.ts
 ```
