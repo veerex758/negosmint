@@ -14,7 +14,6 @@ import 'task_completion_screen.dart';
 class TaskDetailScreen extends StatefulWidget {
   const TaskDetailScreen({super.key, required this.task});
   final TaskItem task;
-
   @override
   State<TaskDetailScreen> createState() => _TaskDetailScreenState();
 }
@@ -342,7 +341,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
 class _Stat extends StatelessWidget {
   const _Stat({required this.label, required this.value, this.color});
-
   final String label;
   final String value;
   final Color? color;
