@@ -28,6 +28,7 @@ create table public.profiles (
   referral_code text unique not null,
   referred_by uuid references public.profiles (id),
   is_admin boolean not null default false,
+  is_suspended boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -237,6 +238,12 @@ declare
   v_withdrawal_id uuid;
   v_ref text;
 begin
+  if auth.uid() is null then raise exception 'Not authenticated'; end if;
+  if p_amount is null or p_amount <= 0 then raise exception 'Withdrawal amount must be greater than zero'; end if;
+  if p_fee is null or p_fee < 0 then raise exception 'Withdrawal fee cannot be negative'; end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 0));
+
   select available into v_available
   from public.wallet_balances
   where user_id = auth.uid();
@@ -453,6 +460,10 @@ alter table public.task_submissions
   add column if not exists started_at timestamptz not null default now();
 create unique index if not exists task_submission_image_hash_unique
   on public.task_submissions(image_hash) where image_hash is not null;
+
+create unique index if not exists transactions_one_task_reward_per_submission
+  on public.transactions(reference_table, reference_id)
+  where type = 'task_reward' and reference_table = 'task_submissions';
 
 create table if not exists public.campaign_escrow (
   campaign_id uuid primary key references public.tasks(id) on delete cascade,
