@@ -752,12 +752,12 @@ begin
   where campaign_id = v_task.id and status = 'active'
   for update;
 
-  if not found or v_escrow.escrow_remaining < v_task.reward then
+  if not found or v_escrow.escrow_remaining < v_reward then
     raise exception 'Campaign escrow is insufficient';
   end if;
 
   update public.campaign_escrow
-  set escrow_remaining = escrow_remaining - v_task.reward
+  set escrow_remaining = escrow_remaining - v_reward
   where campaign_id = v_task.id;
 
   update public.task_submissions
@@ -771,7 +771,7 @@ begin
     user_id, type, status, amount, description, reference_table, reference_id
   )
   values (
-    auth.uid(), 'task_reward', 'pending', v_task.reward,
+    auth.uid(), 'task_reward', 'pending', v_reward,
     'Pending verification: ' || v_task.title,
     'task_submissions', p_submission_id
   );
@@ -793,6 +793,17 @@ $;
 
 revoke execute on function public.is_admin() from public, anon;
 grant execute on function public.is_admin() to authenticated;
+
+revoke execute on function public.reserve_task_slot(uuid) from public, anon;
+grant execute on function public.reserve_task_slot(uuid) to authenticated;
+revoke execute on function public.submit_task_proof(uuid, text, text) from public, anon;
+grant execute on function public.submit_task_proof(uuid, text, text) to authenticated;
+revoke execute on function public.approve_task_submission(uuid) from public, anon;
+grant execute on function public.approve_task_submission(uuid) to authenticated;
+revoke execute on function public.reject_task_submission(uuid, text) from public, anon;
+grant execute on function public.reject_task_submission(uuid, text) to authenticated;
+revoke execute on function public.request_withdrawal(numeric, numeric, text) from public, anon;
+grant execute on function public.request_withdrawal(numeric, numeric, text) to authenticated;
 
 -- Admin-only atomic settlement for manually reviewed submissions.
 create or replace function public.approve_task_submission(p_submission_id uuid)
