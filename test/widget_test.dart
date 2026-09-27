@@ -5,14 +5,33 @@ import 'package:negosmint/main.dart';
 void main() {
   testWidgets('App boots and shows the splash screen',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const NegosMintApp());
+    await tester.pumpWidget(NegosMintApp(
+      initializeServices: () async {},
+    ));
+    await tester.pump();
 
-    // Splash screen renders the NEGOSMINT wordmark before navigating away.
     expect(find.text('NEGOSMINT'), findsOneWidget);
-
-    // The splash screen schedules a Future.delayed to auto-navigate to
-    // LoginScreen. Advance the (fake) clock past the splash delay so the test doesn't
-    // end with a pending timer, which flutter_test treats as a failure.
     await tester.pump(const Duration(milliseconds: 1200));
+  });
+
+  testWidgets('Startup error can be retried',
+      (WidgetTester tester) async {
+    var shouldError = true;
+
+    await tester.pumpWidget(NegosMintApp(
+      initializeServices: () async {
+        if (shouldError) throw StateError('Service initialization error');
+      },
+    ));
+    await tester.pump();
+
+    expect(find.text('Unable to start NegosMint'), findsOneWidget);
+    expect(find.text('Retry startup'), findsOneWidget);
+
+    shouldError = false;
+    await tester.tap(find.text('Retry startup'));
+    await tester.pump();
+
+    expect(find.text('NEGOSMINT'), findsOneWidget);
   });
 }
