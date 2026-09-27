@@ -106,6 +106,7 @@ create table public.tasks (
   description text,
   category text not null,
   reward numeric(12, 2) not null check (reward > 0),
+  currency_code text not null default 'USD' check (currency_code in ('USD','NGN')),
   minutes integer not null check (minutes > 0),
   requirements text,
   is_active boolean not null default true,
@@ -415,6 +416,8 @@ insert into public.tasks (title, description, category, reward, minutes) values
 -- ============================================================================
 -- Proof is submitted only through submit_task_proof(). Clients can no longer
 -- create arbitrary submissions or change their state directly.
+alter table public.task_submissions drop constraint if exists task_submissions_task_id_user_id_key;
+
 drop policy if exists "Users can start a task" on public.task_submissions;
 
 alter table public.profiles
