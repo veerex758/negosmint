@@ -4,7 +4,7 @@ class TaskModel {
     required this.reward, required this.minutes, this.description,
     this.requirements, this.isActive = true, this.advertiserName,
     this.advertiserRating, this.totalSlots, this.remainingSlots,
-    this.verificationMode = 'manual', this.reservationMinutes = 20,
+    this.verificationMode = 'manual', this.reservationMinutes = 20, this.currencyCode = 'USD',
   });
 
   final String id;
@@ -21,6 +21,7 @@ class TaskModel {
   final int? remainingSlots;
   final String verificationMode;
   final int reservationMinutes;
+  final String currencyCode;
 
   factory TaskModel.fromMap(Map<String, dynamic> map) => TaskModel(
     id: map['id'] as String,
@@ -37,6 +38,7 @@ class TaskModel {
     remainingSlots: map['remaining_slots'] as int?,
     verificationMode: map['verification_mode'] as String? ?? 'manual',
     reservationMinutes: map['reservation_minutes'] as int? ?? 20,
+    currencyCode: map['currency_code'] as String? ?? 'USD',
   );
 }
 
