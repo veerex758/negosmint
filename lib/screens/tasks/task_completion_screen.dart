@@ -134,7 +134,7 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                         children: [
                           Text(
                             widget.instantApproved ? 'TASK VERIFIED' : 'PROOF SUBMITTED',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -163,7 +163,7 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                           const SizedBox(height: 4),
                           Text(
                             widget.instantApproved ? 'Auto-approved and added to your available balance' : 'Pending verification · escrow release within 24 hours',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
                             ),
