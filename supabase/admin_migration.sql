@@ -245,6 +245,12 @@ declare
   v_ref text;
   v_suspended boolean;
 begin
+  if auth.uid() is null then raise exception 'Not authenticated'; end if;
+  if p_amount is null or p_amount <= 0 then raise exception 'Withdrawal amount must be greater than zero'; end if;
+  if p_fee is null or p_fee < 0 then raise exception 'Withdrawal fee cannot be negative'; end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 0));
+
   select is_suspended into v_suspended
   from public.profiles where id = auth.uid();
 
