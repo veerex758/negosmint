@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:negosmint/main.dart';
 
 void main() {
-  testWidgets('App boots and shows the splash screen',
+  testWidgets('App boots and reaches the latest login screen',
       (WidgetTester tester) async {
     await tester.pumpWidget(NegosMintApp(
       initializeServices: () async {},
@@ -11,7 +11,12 @@ void main() {
     await tester.pump();
 
     expect(find.text('NEGOSMINT'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 1200));
+
+    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome back!'), findsOneWidget);
+    expect(find.text('Sign in to your account'), findsOneWidget);
   });
 
   testWidgets('Startup error can be retried',
