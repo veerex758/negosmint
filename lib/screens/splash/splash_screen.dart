@@ -10,7 +10,6 @@ const _sageGreen = Color(0xFF8EA873);
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -28,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   late final Animation<double> _entrance = CurvedAnimation(
     parent: _controller,
-    curve: Curves.outCirc,
+    curve: Curves.easeOutCubic,
   );
 
   late final AnimationController _exitController = AnimationController(
@@ -128,30 +127,30 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     final content = Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const _MonogramEmblem(size: 126),
-                const SizedBox(height: 30),
-                const Text(
-                  'NEGOSMINT',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 27,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 3,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Complete. Earn. Grow.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 14,
-                    letterSpacing: 0.35,
-                  ),
-                ),
-              ],
-            );
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _MonogramEmblem(size: 126),
+        const SizedBox(height: 30),
+        const Text(
+          'NEGOSMINT',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 27,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Complete. Earn. Grow.',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 14,
+            letterSpacing: 0.35,
+          ),
+        ),
+      ],
+    );
 
     final entranceContent = FadeTransition(
       opacity: _entrance,
@@ -183,7 +182,6 @@ class _SplashScreenState extends State<SplashScreen>
 
 class _MonogramEmblem extends StatelessWidget {
   const _MonogramEmblem({required this.size});
-
   final double size;
 
   @override
