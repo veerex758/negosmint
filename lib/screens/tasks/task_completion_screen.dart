@@ -154,7 +154,7 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                           const SizedBox(height: 18),
                           AnimatedCounter(
                             value: _textIn.value.clamp(0.0, 1.0) * widget.reward,
-                            prefix: '+${widget.currencyCode == 'NGN' ? '₦' : r'
+                            prefix: '+${widget.currencyCode == 'NGN' ? '₦' : r'$'}',
                             style: const TextStyle(
                               color: AppColors.success,
                               fontSize: 32,
