@@ -87,7 +87,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             taskTitle: widget.task.title,
             reward: widget.task.reward,
             currencyCode: widget.task.currencyCode,
-            instantApproved: status == 'instant_approved',
+            instantApproved: status == 'completed',
           ),
         ),
       );
