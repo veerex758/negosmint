@@ -49,14 +49,6 @@ class _SplashScreenState extends State<SplashScreen>
     curve: Curves.easeInCubic,
   ));
 
-  late final Animation<double> _exitBlur = Tween<double>(
-    begin: 0,
-    end: 1,
-  ).animate(CurvedAnimation(
-    parent: _exitController,
-    curve: Curves.easeInCubic,
-  ));
-
   @override
   void initState() {
     super.initState();
