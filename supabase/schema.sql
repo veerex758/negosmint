@@ -605,7 +605,11 @@ begin
   from public.user_trust_profiles
   where user_id = auth.uid();
 
-  if coalesce(v_trust.current_level, 1) < v_task.minimum_trust_level then
+  select coalesce(level, 1) into v_level
+  from public.levels
+  where user_id = auth.uid();
+
+  if coalesce(v_level, 1) < v_task.minimum_trust_level then
     raise exception 'Mint Rank is too low for this task';
   end if;
 
