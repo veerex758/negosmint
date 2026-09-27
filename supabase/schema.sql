@@ -405,11 +405,11 @@ create trigger on_auth_user_created
 -- 9. SEED TASKS (matches the placeholder tasks already in the Flutter UI)
 -- ---------------------------------------------------------------------------
 insert into public.tasks (title, description, category, reward, minutes) values
-  ('Complete Survey', 'Answer a short consumer survey.', 'Surveys', 1.50, 5),
-  ('Install & Try App', 'Install a partner app and try it for 5 minutes.', 'Apps', 2.25, 10),
-  ('Follow & Share', 'Follow and share a partner social post.', 'Social', 0.75, 3),
-  ('Watch Short Video', 'Watch a short sponsored video to completion.', 'Videos', 0.40, 2),
-  ('Sign Up Offer', 'Complete a partner sign-up offer.', 'Offers', 4.00, 15);
+  ('Complete Survey', 'Answer a short consumer survey.', 'Surveys', 1.50, 5, null, null, false),
+  ('Install & Try App', 'Install a partner app and try it for 5 minutes.', 'Apps', 2.25, 10, null, null, false),
+  ('Follow & Share', 'Follow and share a partner social post.', 'Social', 0.75, 3, null, null, false),
+  ('Watch Short Video', 'Watch a short sponsored video to completion.', 'Videos', 0.40, 2, null, null, false),
+  ('Sign Up Offer', 'Complete a partner sign-up offer.', 'Offers', 4.00, 15, null, null, false);
 
 -- ============================================================================
 -- 10. BLUEPRINT UPGRADE: reservations, verification, trust, and campaigns
@@ -579,6 +579,7 @@ as $$
 declare
   v_task public.tasks%rowtype;
   v_trust public.user_trust_profiles%rowtype;
+  v_level integer;
   v_submission public.task_submissions%rowtype;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
