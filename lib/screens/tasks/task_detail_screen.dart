@@ -274,9 +274,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          const Icon(Icons.shield_outlined, color: AppColors.warning),
-                          const SizedBox(width: 10),
-                          const Expanded(
+                          Icon(Icons.shield_outlined, color: AppColors.warning),
+                          SizedBox(width: 10),
+                          Expanded(
                             child: Text(
                               'Submit proof that directly satisfies the requirements. Instant tasks are checked against the campaign criteria; other submissions are reviewed before the reward is released.',
                               style: TextStyle(
