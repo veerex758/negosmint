@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:negosmint/main.dart';
+import 'package:negosmint/screens/splash/splash_screen.dart';
 
 void main() {
   testWidgets('App boots and reaches the latest login screen',
@@ -11,9 +12,9 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('NEGOSMINT'), findsOneWidget);
+    expect(find.byType(SplashScreen), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 3500));
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome back!'), findsOneWidget);
@@ -40,6 +41,6 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('NEGOSMINT'), findsOneWidget);
+    expect(find.byType(SplashScreen), findsOneWidget);
   });
 }
