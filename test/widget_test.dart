@@ -9,6 +9,7 @@ void main() {
       initializeServices: () async {},
     ));
     await tester.pump();
+    await tester.pump();
 
     expect(find.text('NEGOSMINT'), findsOneWidget);
 
@@ -29,12 +30,14 @@ void main() {
       },
     ));
     await tester.pump();
+    await tester.pump();
 
     expect(find.text('Unable to start NegosMint'), findsOneWidget);
     expect(find.text('Retry startup'), findsOneWidget);
 
     shouldError = false;
     await tester.tap(find.text('Retry startup'));
+    await tester.pump();
     await tester.pump();
 
     expect(find.text('NEGOSMINT'), findsOneWidget);
