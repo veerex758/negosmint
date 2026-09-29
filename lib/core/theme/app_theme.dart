@@ -48,7 +48,7 @@ class AppTheme {
       ),
       textSelectionTheme: const TextSelectionThemeData(
         cursorColor: AppColors.highlight,
-        selectionColor: Color(0x553157FF),
+        selectionColor: Color(0x558EA873),
         selectionHandleColor: AppColors.cobalt,
       ),
     );

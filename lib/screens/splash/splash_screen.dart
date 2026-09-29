@@ -1,18 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../../core/widgets/diagnostic_display.dart';
 import '../auth/login_screen.dart';
+import '../main_nav/main_nav_screen.dart';
+import '../../services/auth_service.dart';
+import '../../core/config/supabase_config.dart';
 
 const _vaultGreen = Color(0xFF0E2218);
 const _sageGreen = Color(0xFF8EA873);
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  Object? _navigationError;
+  bool _navigating = false;
+  bool _exiting = false;
+  Timer? _exitTimer;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1800),
@@ -20,28 +30,63 @@ class _SplashScreenState extends State<SplashScreen>
 
   late final Animation<double> _entrance = CurvedAnimation(
     parent: _controller,
-    curve: Curves.outCirc,
+    curve: Curves.easeOutCubic,
   );
+
+  late final AnimationController _exitController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+  );
+
+  late final Animation<double> _exitOpacity = CurvedAnimation(
+    parent: _exitController,
+    curve: Curves.easeInCubic,
+  );
+
+  late final Animation<double> _exitScale = Tween<double>(
+    begin: 1,
+    end: 0.88,
+  ).animate(CurvedAnimation(
+    parent: _exitController,
+    curve: Curves.easeInCubic,
+  ));
 
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 2500), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(_loginRoute());
-    });
+    _exitTimer = Timer(const Duration(milliseconds: 2200), _beginExit);
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Future<void> _beginExit() async {
+    if (!mounted || _navigating || _exiting) return;
+    setState(() => _exiting = true);
+    await _exitController.forward();
+    if (mounted) _navigate();
   }
 
-  Route<void> _loginRoute() => PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 650),
-        reverseTransitionDuration: const Duration(milliseconds: 350),
-        pageBuilder: (_, __, ___) => const LoginScreen(),
+  void _navigate() {
+    if (!mounted || _navigating) return;
+    setState(() => _navigating = true);
+    try {
+      final destination =
+          SupabaseConfig.isConfigured && AuthService.instance.isSignedIn
+              ? const MainNavScreen()
+              : const LoginScreen();
+      Navigator.of(context).pushReplacement(_loginRoute(destination));
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _navigationError = error;
+          _navigating = false;
+        });
+      }
+    }
+  }
+
+  Route<void> _loginRoute(Widget destination) => PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 720),
+        reverseTransitionDuration: const Duration(milliseconds: 380),
+        pageBuilder: (_, __, ___) => destination,
         transitionsBuilder: (_, animation, __, child) {
           final curved = CurvedAnimation(
             parent: animation,
@@ -52,63 +97,95 @@ class _SplashScreenState extends State<SplashScreen>
             opacity: curved,
             child: SlideTransition(
               position: Tween<Offset>(
-                begin: const Offset(0, 0.035),
+                begin: const Offset(0, 0.025),
                 end: Offset.zero,
               ).animate(curved),
-              child: child,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
+                child: child,
+              ),
             ),
           );
         },
       );
 
   @override
+  void dispose() {
+    _exitTimer?.cancel();
+    _controller.dispose();
+    _exitController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_navigationError != null) {
+      return DiagnosticDisplay(
+        title: 'Unable to continue',
+        message: 'NegosMint could not open the next screen. '
+            'Please retry to continue.\n\n'
+            'Diagnostic: ${_navigationError.runtimeType}',
+        retryLabel: 'Retry navigation',
+        onRetry: _navigate,
+      );
+    }
+
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _MonogramEmblem(size: 126),
+        const SizedBox(height: 30),
+        const Text(
+          'NEGOSMINT',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 27,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Complete. Earn. Grow.',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 14,
+            letterSpacing: 0.35,
+          ),
+        ),
+      ],
+    );
+
+    final entranceContent = FadeTransition(
+      opacity: _entrance,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.055),
+          end: Offset.zero,
+        ).animate(_entrance),
+        child: content,
+      ),
+    );
+
+    final exitingContent = FadeTransition(
+      opacity: Tween<double>(begin: 1, end: 0).animate(_exitOpacity),
+      child: ScaleTransition(
+        scale: _exitScale,
+        child: entranceContent,
+      ),
+    );
+
     return Scaffold(
       backgroundColor: _vaultGreen,
       body: Center(
-        child: FadeTransition(
-          opacity: _entrance,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.055),
-              end: Offset.zero,
-            ).animate(_entrance),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const _MonogramEmblem(size: 126),
-                const SizedBox(height: 30),
-                const Text(
-                  'NEGOSMINT',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 27,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 3,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Complete. Earn. Grow.',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 14,
-                    letterSpacing: 0.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        child: _exiting ? exitingContent : entranceContent,
       ),
     );
   }
 }
 
-/// A compact, line-built NM mark so the identity stays sharp at every size.
 class _MonogramEmblem extends StatelessWidget {
   const _MonogramEmblem({required this.size});
-
   final double size;
 
   @override

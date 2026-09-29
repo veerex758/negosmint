@@ -220,6 +220,8 @@ $$;
 -- request withdrawals. Existing balances/history remain visible (their
 -- own SELECT policies are untouched), only new actions are blocked.
 -- ---------------------------------------------------------------------------
+alter table public.task_submissions drop constraint if exists task_submissions_task_id_user_id_key;
+
 drop policy if exists "Users can start a task" on public.task_submissions;
 create policy "Users can start a task"
   on public.task_submissions for insert
@@ -245,6 +247,12 @@ declare
   v_ref text;
   v_suspended boolean;
 begin
+  if auth.uid() is null then raise exception 'Not authenticated'; end if;
+  if p_amount is null or p_amount <= 0 then raise exception 'Withdrawal amount must be greater than zero'; end if;
+  if p_fee is null or p_fee < 0 then raise exception 'Withdrawal fee cannot be negative'; end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 0));
+
   select is_suspended into v_suspended
   from public.profiles where id = auth.uid();
 
@@ -287,3 +295,53 @@ $$;
 -- ---------------------------------------------------------------------------
 -- update public.profiles set is_admin = true
 -- where id = (select id from auth.users where email = 'you@example.com');
+
+
+-- ---------------------------------------------------------------------------
+-- TASK REVIEW SETTLEMENT
+-- These functions are defined in schema.sql too; keeping the definitions here
+-- makes rerunning admin_migration.sql sufficient after an older deployment.
+-- ---------------------------------------------------------------------------
+create or replace function public.approve_task_submission(p_submission_id uuid)
+returns text language plpgsql security definer set search_path=public as $$
+declare v_submission public.task_submissions%rowtype;
+begin
+  if not public.is_admin() then raise exception 'Not authorized'; end if;
+  select * into v_submission from public.task_submissions where id=p_submission_id for update;
+  if not found or v_submission.status <> 'under_review' then raise exception 'Submission is not awaiting review'; end if;
+  update public.task_submissions set status='completed', reviewed_at=now() where id=p_submission_id;
+  update public.transactions set status='completed'
+    where reference_table='task_submissions' and reference_id=p_submission_id
+      and type='task_reward' and status='pending';
+  update public.user_trust_profiles
+    set total_completed_tasks=total_completed_tasks+1, updated_at=now()
+    where user_id=v_submission.user_id;
+  return 'approved';
+end; $$;
+
+create or replace function public.reject_task_submission(p_submission_id uuid, p_reason text default 'Proof did not meet the campaign criteria')
+returns text language plpgsql security definer set search_path=public as $$
+declare v_submission public.task_submissions%rowtype; v_task public.tasks%rowtype; v_tx public.transactions%rowtype;
+begin
+  if not public.is_admin() then raise exception 'Not authorized'; end if;
+  select * into v_submission from public.task_submissions where id=p_submission_id for update;
+  if not found or v_submission.status <> 'under_review' then raise exception 'Submission is not awaiting review'; end if;
+  select * into v_task from public.tasks where id=v_submission.task_id;
+  update public.task_submissions set status='rejected', rejection_reason=p_reason, reviewed_at=now() where id=p_submission_id;
+  select * into v_tx from public.transactions
+    where reference_table='task_submissions' and reference_id=p_submission_id
+      and type='task_reward' and status='pending' for update;
+  if found then
+    update public.transactions set status='reversed' where id=v_tx.id;
+    update public.campaign_escrow
+      set escrow_remaining=escrow_remaining+v_tx.amount
+      where campaign_id=v_task.id;
+  end if;
+  update public.user_trust_profiles
+    set total_rejected_tasks=total_rejected_tasks+1, updated_at=now()
+    where user_id=v_submission.user_id;
+  return 'rejected';
+end; $$;
+
+revoke execute on function public.approve_task_submission(uuid) from public, anon;
+revoke execute on function public.reject_task_submission(uuid, text) from public, anon;

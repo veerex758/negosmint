@@ -25,6 +25,7 @@ typedef _DashboardData = ({
   int streak,
   List<TaskItem> tasks,
   double weeklyChangePct,
+  int level,
 });
 
 class DashboardScreen extends StatefulWidget {
@@ -53,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         AuthService.instance.fetchStreak(userId),
         TaskService.instance.fetchTasks(),
         WalletService.instance.fetchEarningsSeries(userId, days: 7, buckets: 1),
+        AuthService.instance.fetchLevel(userId),
       ]);
       final tasks = (results[3] as List).cast<dynamic>();
       final weekSeries = results[4] as EarningsSeries;
@@ -64,6 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           for (final t in tasks.take(3)) TaskItem.fromModel(t),
         ],
         weeklyChangePct: weekSeries.changePct,
+        level: (results[5] as ({int xp, int level})).level,
       );
     }();
   }
@@ -114,9 +117,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.menu_rounded,
-                                  color: AppColors.textPrimary),
-                              const SizedBox(width: 14),
+                              Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6), decoration: BoxDecoration(color: AppColors.surfaceElevated, borderRadius: BorderRadius.circular(10)), child: Text('PRO · LVL ${data.level}', style: const TextStyle(color: AppColors.highlight, fontSize: 10, fontWeight: FontWeight.w800))),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,6 +162,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 16),
                           BalanceCard(
                             balance: data.balance.available,
+                            pendingBalance: data.balance.pending,
                             weeklyChangePct: data.weeklyChangePct,
                             onWithdraw: () async {
                               await Navigator.of(context).push(
@@ -175,7 +178,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 .push(appRoute(const WalletScreen())),
                           ),
                           const SizedBox(height: 20),
-                          const Text('Quick Actions',
+                          const Text('Quick access',
                               style: TextStyle(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w700,

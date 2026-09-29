@@ -10,10 +10,14 @@ class TaskCompletionScreen extends StatefulWidget {
     super.key,
     required this.taskTitle,
     required this.reward,
+    required this.currencyCode,
+    required this.instantApproved,
   });
 
   final String taskTitle;
   final double reward;
+  final String currencyCode;
+  final bool instantApproved;
 
   @override
   State<TaskCompletionScreen> createState() => _TaskCompletionScreenState();
@@ -26,25 +30,21 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
     duration: const Duration(milliseconds: 1400),
   );
 
-  // Checkmark draws itself over the first ~40% of the timeline.
   late final Animation<double> _checkDraw = CurvedAnimation(
     parent: _controller,
     curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
   );
 
-  // Ring scale-in slightly ahead of the check.
   late final Animation<double> _ringScale = CurvedAnimation(
     parent: _controller,
     curve: const Interval(0.0, 0.35, curve: Curves.elasticOut),
   );
 
-  // Coins burst outward right after the check completes.
   late final Animation<double> _burst = CurvedAnimation(
     parent: _controller,
     curve: const Interval(0.35, 0.85, curve: Curves.easeOut),
   );
 
-  // Text + reward number fade/count in near the end.
   late final Animation<double> _textIn = CurvedAnimation(
     parent: _controller,
     curve: const Interval(0.5, 0.9, curve: Curves.easeOut),
@@ -101,8 +101,7 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                                 gradient: AppColors.brandGradient,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.cobalt
-                                        .withValues(alpha: 0.4),
+                                    color: AppColors.cobalt.withValues(alpha: 0.4),
                                     blurRadius: 30,
                                     spreadRadius: 2,
                                   ),
@@ -114,7 +113,9 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                             width: 64,
                             height: 64,
                             child: CustomPaint(
-                              painter: _CheckPainter(progress: _checkDraw.value),
+                              painter: _CheckPainter(
+                                progress: _checkDraw.value,
+                              ),
                             ),
                           ),
                         ],
@@ -130,9 +131,11 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                       opacity: _textIn.value.clamp(0.0, 1.0),
                       child: Column(
                         children: [
-                          const Text(
-                            'TASK COMPLETED',
-                            style: TextStyle(
+                          Text(
+                            widget.instantApproved
+                                ? 'TASK VERIFIED'
+                                : 'PROOF SUBMITTED',
+                            style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -150,7 +153,8 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                           const SizedBox(height: 18),
                           AnimatedCounter(
                             value: _textIn.value.clamp(0.0, 1.0) * widget.reward,
-                            prefix: '+\$',
+                            prefix:
+                                '+${widget.currencyCode == 'NGN' ? '₦' : r'$'}',
                             style: const TextStyle(
                               color: AppColors.success,
                               fontSize: 32,
@@ -159,9 +163,11 @@ class _TaskCompletionScreenState extends State<TaskCompletionScreen>
                             duration: const Duration(milliseconds: 300),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Added to your balance',
-                            style: TextStyle(
+                          Text(
+                            widget.instantApproved
+                                ? 'Auto-approved and added to your available balance'
+                                : 'Pending verification · escrow release within 24 hours',
+                            style: const TextStyle(
                               color: AppColors.textSecondary,
                               fontSize: 12,
                             ),
@@ -222,6 +228,7 @@ class _CoinParticle {
 
 class _CheckPainter extends CustomPainter {
   _CheckPainter({required this.progress});
+
   final double progress;
 
   @override

@@ -1,15 +1,15 @@
 # NegosMint (Flutter)
 
-**Earn. Achieve. Advance.**
+**Complete. Earn. Grow.**
 
-Implemented in Flutter/Dart with the Minted Copper identity — copper
-and bronze on obsidian navy. Covers the full original build plan; every
-feature including deposits (Stripe) is wired up (see "Not included"
-below for the small remaining gaps).
+Implemented in Flutter/Dart with the vault-green NegosMint identity. The
+updated earning flow reserves campaign inventory, collects proof, and sends
+it through a server-owned verification and escrow path rather than crediting
+rewards from the client.
 
 ## What's included
 
-- **Theme** (`lib/core/theme`) — full Minted Copper color system + dark
+- **Theme** (`lib/core/theme`) — vault-green, sage, and sage-gold system + dark
   `ThemeData` (Inter via Google Fonts).
 - **Reusable widgets** (`lib/core/widgets`):
   - `GlassCard` — glassmorphism panel with entrance (fade+slide+scale) and
@@ -37,8 +37,8 @@ below for the small remaining gaps).
 1. Create a project at supabase.com.
 2. Open the SQL editor and run `supabase/schema.sql` top to bottom. It
    creates every table, the wallet ledger view, RLS policies, and the
-   `complete_task()` / `request_withdrawal()` functions that do
-   server-side reward validation (see comments in that file for why).
+   `reserve_task_slot()` / `submit_task_proof()` / `request_withdrawal()` functions that do
+   server-side slot reservation, proof verification routing, escrow, and reward validation.
 3. Run `supabase/admin_migration.sql` next (same SQL editor, new query).
    It adds everything the admin dashboard needs — suspension support,
    admin RLS policies, and the approve/reject-withdrawal functions.
@@ -71,15 +71,15 @@ below for the small remaining gaps).
    Log out and back in — you'll see **Admin Dashboard** at the bottom of
    the Profile screen's menu.
 9. Grab your project's URL and anon key from Project Settings → API.
-10. Run locally with both passed in. The supplied Stripe **test-mode**
-    publishable key is the app default; pass `STRIPE_PUBLISHABLE_KEY` only
-    when you need to override it for another Stripe account:
+10. Run locally with both passed in (add `STRIPE_PUBLISHABLE_KEY` too
+    once you've done the Stripe setup below):
 
     ```bash
     flutter pub get
     flutter run \
       --dart-define=SUPABASE_URL=https://xxxx.supabase.co \
-      --dart-define=SUPABASE_ANON_KEY=eyJhbGciOi...
+      --dart-define=SUPABASE_ANON_KEY=eyJhbGciOi... \
+      --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_...
     ```
 
 11. For CI, add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
@@ -117,7 +117,7 @@ reading in full, but the short version:
    ```
    (You'll get the webhook secret in step 5 below — come back and set
    it after.)
-4. **Deploy the two functions:**
+4. **Deploy the three functions:**
    ```bash
    supabase functions deploy create-payment-intent
    supabase functions deploy stripe-webhook --no-verify-jwt
@@ -131,9 +131,11 @@ reading in full, but the short version:
    Listen for `payment_intent.succeeded` and
    `payment_intent.payment_failed`. Copy the signing secret it gives you
    and run the `STRIPE_WEBHOOK_SECRET` command from step 3.
-6. **Required native Android setup.** `flutter_stripe` needs the following
-   Android settings; this project includes them so the PaymentSheet can run
-   and build for release:
+6. **Required native Android setup.** `flutter_stripe` needs a few
+   changes to `android/` that I don't have access to generate myself
+   (I've only ever touched `lib/`, `pubspec.yaml`, and `supabase/` in
+   this project) — without these, the payment sheet will crash on
+   Android, or the release build will fail outright:
    - In `android/app/build.gradle`, under `defaultConfig`, set
      `minSdkVersion 21` (or higher).
    - In `android/app/src/main/kotlin/.../MainActivity.kt`, change the
@@ -200,12 +202,12 @@ can configure without Xcode/native Android project access — see
 and [Google Pay](https://docs.page/flutter-stripe/flutter_stripe/googlepay)
 guides if you want those specifically.
 
-**Deposit completion is webhook-driven.** The Flutter app creates the
-PaymentIntent and presents Stripe's PaymentSheet, then re-fetches its wallet
-and deposit data. It never calls a function to credit the wallet or marks a
-deposit successful itself. `stripe-webhook` verifies the Stripe signature and
-calls `credit_deposit()` after Stripe reports `payment_intent.succeeded`; that
-function is idempotent, so duplicate webhook deliveries are safe.
+**Why two confirmation paths?** `confirm-deposit` is the fast path —
+called the instant the payment sheet closes, and gives the user
+immediate feedback. `stripe-webhook` is the safety net for when that
+call never happens (app killed, connection dropped right after paying).
+`credit_deposit()` is idempotent, so whichever one gets there first
+does the work and the other is a no-op.
 
 ## Not included yet (per the original phased plan)
 
@@ -213,7 +215,7 @@ function is idempotent, so duplicate webhook deliveries are safe.
   Privacy are all placeholder menu items).
 
 Everything else — sign up, sign in, browsing tasks, task details,
-starting/completing tasks, wallet balance and history, deposits (Stripe),
+slot reservation and proof submission, wallet balance and history, deposits (Stripe),
 withdrawals, referral code/stats/sharing, notifications, profile stats
 and Level/XP, logout, the dashboard's weekly change %, the earnings
 chart's 7D/1M/3M/1Y series, the admin dashboard (analytics, withdrawal
