@@ -15,7 +15,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   Object? _navigationError;
   bool _navigating = false;
   bool _exiting = false;
