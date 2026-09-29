@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../core/widgets/diagnostic_display.dart';
 import '../auth/login_screen.dart';
@@ -19,6 +21,7 @@ class _SplashScreenState extends State<SplashScreen>
   Object? _navigationError;
   bool _navigating = false;
   bool _exiting = false;
+  Timer? _exitTimer;
 
   late final AnimationController _controller = AnimationController(
     vsync: this,
@@ -51,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 2200), _beginExit);
+    _exitTimer = Timer(const Duration(milliseconds: 2200), _beginExit);
   }
 
   Future<void> _beginExit() async {
@@ -108,6 +111,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _exitTimer?.cancel();
     _controller.dispose();
     _exitController.dispose();
     super.dispose();
