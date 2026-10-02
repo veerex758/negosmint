@@ -3,121 +3,81 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/particle_background.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/primary_button.dart';
-import '../../services/wallet_service.dart';
-
-enum _WithdrawStep { amount, method, summary, submitted }
-
-class _WithdrawMethod {
-  const _WithdrawMethod(this.label, this.icon, this.feeRate, this.detail);
-  final String label;
-  final IconData icon;
-  final double feeRate; // fraction of amount
-  final String detail;
-}
+import '../../services/crypto_wallet_service.dart';
 
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key, required this.availableBalance});
   final double availableBalance;
-
   @override
   State<WithdrawScreen> createState() => _WithdrawScreenState();
 }
 
 class _WithdrawScreenState extends State<WithdrawScreen> {
-  _WithdrawStep _step = _WithdrawStep.amount;
   final _amountController = TextEditingController();
-  String? _amountError;
-  int _methodIndex = 0;
+  final _addressController = TextEditingController();
+  String _asset = 'USDT';
+  String _network = 'POLYGON';
+  String? _error;
   bool _submitting = false;
-  String? _transactionId;
+  CryptoWithdrawalResult? _result;
 
+  static const _networks = <String, String>{
+    'POLYGON': 'Polygon',
+    'BSC': 'BNB Smart Chain',
+    'ARBITRUM': 'Arbitrum',
+    'BASE': 'Base',
+    'ETHEREUM': 'Ethereum',
+  };
 
-  static const _methods = [
-    _WithdrawMethod('Bank Transfer', Icons.account_balance_outlined, 0.02,
-        'Arrives in 1–3 business days'),
-    _WithdrawMethod('Mobile Money', Icons.phone_iphone_rounded, 0.015,
-        'Arrives within minutes'),
-    _WithdrawMethod('Other', Icons.more_horiz_rounded, 0.03,
-        'Manual review required'),
-  ];
-
-  double get _amount => double.tryParse(_amountController.text) ?? 0;
-  _WithdrawMethod get _method => _methods[_methodIndex];
-  double get _fee => _amount * _method.feeRate;
-  double get _youReceive {
-    final remainder = _amount - _fee;
-    return remainder < 0 ? 0.0 : remainder;
-  }
+  double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
 
   @override
   void dispose() {
     _amountController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
-  static const minimumWithdrawal = 5.0;
-
-  void _validateAndContinue() {
-    final amount = double.tryParse(_amountController.text);
-    if (amount == null || amount <= 0) {
-      setState(() => _amountError = 'Enter a valid amount');
+  Future<void> _withdraw() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _error = null);
+    if (_amount <= 0) {
+      setState(() => _error = 'Enter a valid amount.');
       return;
     }
-    if (amount < minimumWithdrawal) {
-      setState(() =>
-          _amountError = 'Minimum withdrawal is \$${minimumWithdrawal.toStringAsFixed(2)}');
+    if (_amount < 5) {
+      setState(() => _error = 'Minimum crypto withdrawal is 5 ' + _asset + '.');
       return;
     }
-    if (amount > widget.availableBalance) {
-      setState(() => _amountError = 'Amount exceeds available balance');
+    if (_amount > widget.availableBalance) {
+      setState(() => _error = 'Amount exceeds your available balance.');
       return;
     }
-    setState(() {
-      _amountError = null;
-      _step = _WithdrawStep.method;
-    });
-  }
-
-  Future<void> _confirmWithdrawal() async {
+    final address = _addressController.text.trim();
+    if (!RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(address)) {
+      setState(() => _error = 'Enter a valid EVM wallet address.');
+      return;
+    }
     setState(() => _submitting = true);
     try {
-      final ref = await WalletService.instance.requestWithdrawal(
+      final result = await CryptoWalletService.instance.withdraw(
         amount: _amount,
-        fee: _fee,
-        method: _method.label,
+        asset: _asset,
+        network: _network,
+        walletAddress: address,
       );
       if (!mounted) return;
       setState(() {
+        _result = result;
         _submitting = false;
-        _transactionId = ref;
-        _step = _WithdrawStep.submitted;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(_friendlyError(e))));
+      setState(() {
+        _submitting = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
     }
-  }
-
-  String _friendlyError(Object e) {
-    final msg = e.toString();
-    if (msg.contains('Insufficient balance')) {
-      return "That's more than your available balance.";
-    }
-    if (msg.contains('already have a pending withdrawal')) {
-      return 'You already have a withdrawal in progress — wait for it to finish first.';
-    }
-    if (msg.contains('Withdrawal limit reached')) {
-      return "You've hit today's withdrawal limit — try again tomorrow.";
-    }
-    if (msg.contains('Account is suspended')) {
-      return 'Your account is suspended. Contact support for help.';
-    }
-    if (msg.contains('Minimum withdrawal')) {
-      return 'Minimum withdrawal is \$${minimumWithdrawal.toStringAsFixed(2)}.';
-    }
-    return 'Withdrawal failed. Try again.';
   }
 
   @override
@@ -132,43 +92,15 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () {
-                        if (_step == _WithdrawStep.amount ||
-                            _step == _WithdrawStep.submitted) {
-                          Navigator.of(context).pop();
-                        } else {
-                          setState(() {
-                            _step = _step == _WithdrawStep.summary
-                                ? _WithdrawStep.method
-                                : _WithdrawStep.amount;
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.arrow_back,
-                          color: AppColors.textPrimary),
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
                     ),
-                    const Text(
-                      'Withdraw',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    const Text('Crypto Withdrawal',
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: switch (_step) {
-                    _WithdrawStep.amount => _buildAmountStep(),
-                    _WithdrawStep.method => _buildMethodStep(),
-                    _WithdrawStep.summary => _buildSummaryStep(),
-                    _WithdrawStep.submitted => _buildSubmittedStep(),
-                  },
-                ),
-              ),
+              Expanded(child: _result != null ? _buildSuccess() : _buildForm()),
             ],
           ),
         ),
@@ -176,254 +108,129 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     );
   }
 
-  Widget _buildAmountStep() {
+  Widget _buildForm() {
     return SingleChildScrollView(
-      key: const ValueKey('amount'),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                const Text('Available Balance',
-                    style:
-                        TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                const SizedBox(height: 6),
-                Text(
-                  '\$${widget.availableBalance.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text('Enter amount',
-              style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _amountController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.w700),
-            decoration: InputDecoration(
-              prefixText: '\$ ',
-              prefixStyle: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700),
-              hintText: '0.00',
-              errorText: _amountError,
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 24),
-          PrimaryButton(label: 'Continue', onPressed: _validateAndContinue),
-          const SizedBox(height: 12),
-          Text(
-            'Minimum withdrawal: \$${minimumWithdrawal.toStringAsFixed(2)}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMethodStep() {
-    return ListView(
-      key: const ValueKey('method'),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      children: [
-        const Text('Withdrawal method',
-            style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 15)),
-        const SizedBox(height: 12),
-        for (var i = 0; i < _methods.length; i++) ...[
-          _MethodTile(
-            method: _methods[i],
-            selected: _methodIndex == i,
-            onTap: () => setState(() => _methodIndex = i),
-          ),
-          const SizedBox(height: 12),
-        ],
-        const SizedBox(height: 12),
-        PrimaryButton(
-          label: 'Continue',
-          onPressed: () => setState(() => _step = _WithdrawStep.summary),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryStep() {
-    return SingleChildScrollView(
-      key: const ValueKey('summary'),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Withdrawal Summary',
-              style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 17)),
-          const SizedBox(height: 16),
-          GlassCard(
-            child: Column(
-              children: [
-                _SummaryRow(label: 'Amount', value: '\$${_amount.toStringAsFixed(2)}'),
-                const SizedBox(height: 12),
-                _SummaryRow(label: 'Method', value: _method.label),
-                const SizedBox(height: 12),
-                _SummaryRow(
-                    label: 'Fee (${(_method.feeRate * 100).toStringAsFixed(1)}%)',
-                    value: '-\$${_fee.toStringAsFixed(2)}'),
-                const Divider(color: AppColors.glassBorder, height: 28),
-                _SummaryRow(
-                  label: "You'll receive",
-                  value: '\$${_youReceive.toStringAsFixed(2)}',
-                  emphasize: true,
+                const Icon(Icons.account_balance_wallet_outlined, color: AppColors.highlight),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Available balance', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text('\$' + widget.availableBalance.toStringAsFixed(2),
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
+                  ]),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
-          PrimaryButton(
-            label: 'Confirm Withdrawal',
-            loading: _submitting,
-            onPressed: _confirmWithdrawal,
+          const Text('Asset', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _asset,
+            dropdownColor: AppColors.background,
+            style: const TextStyle(color: AppColors.textPrimary),
+            decoration: const InputDecoration(prefixIcon: Icon(Icons.token)),
+            items: const [
+              DropdownMenuItem(value: 'USDT', child: Text('USDT')),
+              DropdownMenuItem(value: 'USDC', child: Text('USDC')),
+            ],
+            onChanged: (v) => setState(() => _asset = v ?? 'USDT'),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSubmittedStep() {
-    return Center(
-      key: const ValueKey('submitted'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.success,
-              ),
-              child:
-                  const Icon(Icons.north_east_rounded, color: AppColors.background, size: 40),
-            ),
-            const SizedBox(height: 20),
-            const Text('Withdrawal Submitted',
-                style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text(
-              'Transaction ID: $_transactionId',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            ),
-            const SizedBox(height: 28),
-            PrimaryButton(
-              label: 'Done',
-              onPressed: () => Navigator.of(context).pop(),
-            ),
+          const SizedBox(height: 18),
+          const Text('Network', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _network,
+            dropdownColor: AppColors.background,
+            style: const TextStyle(color: AppColors.textPrimary),
+            decoration: const InputDecoration(prefixIcon: Icon(Icons.hub_outlined)),
+            items: _networks.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+            onChanged: (v) => setState(() => _network = v ?? 'POLYGON'),
+          ),
+          const SizedBox(height: 18),
+          const Text('Wallet address', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _addressController,
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            autocorrect: false,
+            decoration: const InputDecoration(hintText: '0x...', prefixIcon: Icon(Icons.wallet_outlined)),
+          ),
+          const SizedBox(height: 8),
+          const Text('Paste the receiving address from Trust Wallet. The network must match exactly.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 11, height: 1.4)),
+          const SizedBox(height: 18),
+          const Text('Amount', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w700),
+            decoration: InputDecoration(hintText: '0.00', suffixText: _asset),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MethodTile extends StatelessWidget {
-  const _MethodTile(
-      {required this.method, required this.selected, required this.onTap});
-  final _WithdrawMethod method;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      onTap: onTap,
-      borderRadius: 18,
-      glowColor: selected ? AppColors.cobalt : null,
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.cobalt.withValues(alpha: selected ? 0.25 : 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(method.icon, color: AppColors.highlight, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+          const SizedBox(height: 24),
+          const GlassCard(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(method.label,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14)),
-                Text(method.detail,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12)),
+                Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
+                SizedBox(width: 10),
+                Expanded(child: Text(
+                  'Crypto transfers are irreversible after broadcast. Check the address and network before confirming.',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+                )),
               ],
             ),
           ),
-          Icon(
-            selected ? Icons.radio_button_checked : Icons.radio_button_off,
-            color: selected ? AppColors.highlight : AppColors.textSecondary,
-          ),
+          const SizedBox(height: 18),
+          PrimaryButton(label: 'Send Crypto', loading: _submitting, onPressed: _withdraw),
         ],
       ),
     );
   }
-}
 
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow(
-      {required this.label, required this.value, this.emphasize = false});
-  final String label;
-  final String value;
-  final bool emphasize;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-        Text(
-          value,
-          style: TextStyle(
-            color: emphasize ? AppColors.success : AppColors.textPrimary,
-            fontSize: emphasize ? 18 : 14,
-            fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
-          ),
+  Widget _buildSuccess() {
+    final r = _result!;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          children: [
+            Container(width: 82, height: 82,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.success),
+              child: const Icon(Icons.check_rounded, color: AppColors.background, size: 44)),
+            const SizedBox(height: 20),
+            const Text('Crypto Sent',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text(r.asset + ' • ' + (_networks[r.network] ?? r.network),
+              style: const TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 20),
+            GlassCard(
+              child: Column(children: [
+                const Text('Transaction hash', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                const SizedBox(height: 8),
+                SelectableText(r.txHash, textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 12)),
+              ]),
+            ),
+            const SizedBox(height: 24),
+            PrimaryButton(label: 'Done', onPressed: () => Navigator.of(context).pop()),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
