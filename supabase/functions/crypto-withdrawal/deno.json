@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "ethers": "npm:ethers@6",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2"
+  }
+}
