@@ -117,12 +117,12 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           const GlassCard(
             child: Row(
               children: [
-                const Icon(Icons.account_balance_wallet_outlined, color: AppColors.highlight),
-                const SizedBox(width: 12),
+                Icon(Icons.account_balance_wallet_outlined, color: AppColors.highlight),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Available balance', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                    const SizedBox(height: 4),
+                    Text('Available balance', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    SizedBox(height: 4),
                     Text('\${widget.availableBalance.toStringAsFixed(2)}',
                       style: const TextStyle(color: AppColors.textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
                   ]),
