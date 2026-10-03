@@ -124,7 +124,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                     Text('Available balance', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                     SizedBox(height: 4),
                     Text('\${widget.availableBalance.toStringAsFixed(2)}',
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
                   ]),
                 ),
               ],
