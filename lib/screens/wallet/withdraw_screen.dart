@@ -46,7 +46,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       return;
     }
     if (_amount < 5) {
-      setState(() => _error = 'Minimum crypto withdrawal is 5 ' + _asset + '.');
+      setState(() => _error = 'Minimum crypto withdrawal is 5 $_asset.');
       return;
     }
     if (_amount > widget.availableBalance) {
@@ -123,7 +123,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const Text('Available balance', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                     const SizedBox(height: 4),
-                    Text('\$' + widget.availableBalance.toStringAsFixed(2),
+                    Text('\${widget.availableBalance.toStringAsFixed(2)}',
                       style: const TextStyle(color: AppColors.textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
                   ]),
                 ),
@@ -215,7 +215,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             const Text('Crypto Sent',
               style: TextStyle(color: AppColors.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text(r.asset + ' • ' + (_networks[r.network] ?? r.network),
+            Text('${r.asset} • ${_networks[r.network] ?? r.network}',
               style: const TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: 20),
             GlassCard(
