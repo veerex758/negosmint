@@ -90,21 +90,18 @@ class _SplashScreenState extends State<SplashScreen>
         transitionsBuilder: (_, animation, __, child) {
           final curved = CurvedAnimation(
             parent: animation,
-            curve: Curves.easeOutCubic,
+            curve: Curves.easeInOutCubic,
             reverseCurve: Curves.easeInCubic,
           );
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.025),
-                end: Offset.zero,
-              ).animate(curved),
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
+          return AnimatedBuilder(
+            animation: curved,
+            child: child,
+            builder: (context, child) {
+              return ClipPath(
+                clipper: _CurvedRevealClipper(curved.value),
                 child: child,
-              ),
-            ),
+              );
+            },
           );
         },
       );
@@ -240,4 +237,36 @@ class _MonogramPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
+class _CurvedRevealClipper extends CustomClipper<Path> {
+  const _CurvedRevealClipper(this.progress);
+
+  final double progress;
+
+  @override
+  Path getClip(Size size) {
+    final p = progress.clamp(0.0, 1.0);
+    final revealTop = size.height * (1 - p);
+    final curveDepth = size.height * 0.12 * (1 - p).clamp(0.0, 1.0);
+
+    return Path()
+      ..moveTo(0, revealTop)
+      ..cubicTo(
+        size.width * 0.22,
+        revealTop + curveDepth,
+        size.width * 0.78,
+        revealTop + curveDepth,
+        size.width,
+        revealTop,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant _CurvedRevealClipper oldClipper) =>
+      oldClipper.progress != progress;
 }
