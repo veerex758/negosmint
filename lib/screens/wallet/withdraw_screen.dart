@@ -114,7 +114,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GlassCard(
+          const GlassCard(
             child: Row(
               children: [
                 const Icon(Icons.account_balance_wallet_outlined, color: AppColors.highlight),
