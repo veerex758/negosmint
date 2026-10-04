@@ -123,7 +123,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('Available balance', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                     SizedBox(height: 4),
-                    Text('\${widget.availableBalance.toStringAsFixed(2)}',
+                    Text('\${widget.availableBalance.toStringAsFixed(2)} $_asset',
                       style: TextStyle(color: AppColors.textPrimary, fontSize: 25, fontWeight: FontWeight.w800)),
                   ]),
                 ),
