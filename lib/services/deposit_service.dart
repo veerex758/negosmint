@@ -12,8 +12,8 @@ class DepositService {
 
   /// Creates a PaymentIntent for [amount] in USD.
   ///
-  /// The deployed Edge Function expects a dollar amount as a JSON number; it
-  /// performs the cents conversion and enforces its own limits server-side.
+  /// The deployed Edge Function expects an integer amount in minor units
+  /// (cents), so $20.00 is sent as 2000.
   Future<({String clientSecret, String? ephemeralKey, String? customerId})>
       createPaymentIntent(double amount) async {
     if (supabase.auth.currentSession == null ||
@@ -23,7 +23,7 @@ class DepositService {
 
     final response = await supabase.functions.invoke(
       'create-payment-intent',
-      body: {'amount': amount},
+      body: {'amount': (amount * 100).round(), 'currency': 'usd'},
     );
     if (response.status != 200) {
       throw DepositException(
