@@ -130,18 +130,48 @@ class _WalletScreenState extends State<WalletScreen> {
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
                         children: [
-                          const Text('Wallet',
-                              style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800)),
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text('Wallet',
+                                    style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800)),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: AppColors.success.withValues(alpha: 0.22),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.lock_outline_rounded,
+                                        size: 13, color: AppColors.success),
+                                    SizedBox(width: 5),
+                                    Text('Secure',
+                                        style: TextStyle(
+                                            color: AppColors.success,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 16),
                           GlassCard(
                             glowColor: AppColors.violet,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Total Balance',
+                                const Text('Available balance (USD)',
                                     style: TextStyle(
                                         color: AppColors.textSecondary,
                                         fontSize: 13)),
