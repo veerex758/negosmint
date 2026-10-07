@@ -51,12 +51,15 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
     }
     try {
       final wallet = await WalletConnectionService.instance.fetchConnectedWallet(userId);
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _wallet = wallet;
         _loading = false;
-      });
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _error = e.toString();
         _loading = false;
       });
@@ -92,7 +95,8 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
         );
       }
     } catch (e) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _connecting = false;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
@@ -125,7 +129,8 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
       });
       await _loadWallet();
     } catch (e) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _connecting = false;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
@@ -140,7 +145,7 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
   }
 
   String _short(String address) =>
-      address.substring(0, 6) + '…' + address.substring(address.length - 4);
+      '${address.substring(0, 6)}…${address.substring(address.length - 4)}';
 
   @override
   Widget build(BuildContext context) {
