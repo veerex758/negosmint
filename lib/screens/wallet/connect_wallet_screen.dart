@@ -46,7 +46,11 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
   Future<void> _loadWallet() async {
     final userId = _userId;
     if (userId == null) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
       return;
     }
     try {
@@ -107,14 +111,18 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
     if (uri.scheme != 'negosmint' || uri.host != 'wallet') return;
     final encoded = uri.queryParameters['result'];
     final requestId = _pendingRequestId;
-    if (encoded == null || requestId == null) return;
+    if (encoded == null || requestId == null) {
+      return;
+    }
 
     try {
       final result = jsonDecode(
         utf8.decode(base64Url.decode(base64Url.normalize(encoded))),
       ) as Map<String, dynamic>;
       final userId = _userId;
-      if (userId == null) return;
+      if (userId == null) {
+        return;
+      }
 
       await WalletConnectionService.instance.saveApprovedConnection(
         userId: userId,
@@ -122,7 +130,9 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
         expectedRequestId: requestId,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _connecting = false;
         _pendingRequestId = null;
@@ -139,9 +149,15 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
 
   Future<void> _disconnect() async {
     final userId = _userId;
-    if (userId == null) return;
+    if (userId == null) {
+        return;
+      }
     await WalletConnectionService.instance.disconnect(userId);
-    if (mounted) setState(() => _wallet = null);
+    if (mounted) {
+      setState(() {
+        _wallet = null;
+      });
+    }
   }
 
   String _short(String address) =>
