@@ -28,7 +28,7 @@ class WalletConnectionService {
         .eq('user_id', userId)
         .isFilter('revoked_at', null)
         .maybeSingle();
-    return row == null ? null : ConnectedWallet.fromMap(row as Map<String, dynamic>);
+    return row == null ? null : ConnectedWallet.fromMap(row);
   }
 
   Future<void> disconnect(String userId) async {
