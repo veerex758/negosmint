@@ -117,7 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Row(
                             children: [
-                              Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6), decoration: BoxDecoration(color: AppColors.surfaceElevated, borderRadius: BorderRadius.circular(10)), child: Text('PRO · LVL ${data.level}', style: const TextStyle(color: AppColors.highlight, fontSize: 10, fontWeight: FontWeight.w800))),
+                              Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6), decoration: BoxDecoration(color: AppColors.surfaceElevated, borderRadius: BorderRadius.circular(10)), child: Text('LEVEL ${data.level}', style: const TextStyle(color: AppColors.highlight, fontSize: 10, fontWeight: FontWeight.w800))),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
