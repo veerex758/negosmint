@@ -57,16 +57,16 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
       final wallet = await WalletConnectionService.instance.fetchConnectedWallet(userId);
       if (mounted) {
         setState(() {
-        _wallet = wallet;
-        _loading = false;
+          _wallet = wallet;
+          _loading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+          _error = e.toString();
+          _loading = false;
+        });
     }
   }
 
@@ -101,9 +101,10 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-        _connecting = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
+          _connecting = false;
+          _error = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
     }
   }
 
@@ -121,8 +122,8 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
       ) as Map<String, dynamic>;
       final userId = _userId;
       if (userId == null) {
-        return;
-      }
+      return;
+    }
 
       await WalletConnectionService.instance.saveApprovedConnection(
         userId: userId,
@@ -141,9 +142,10 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-        _connecting = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
-      });
+          _connecting = false;
+          _error = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
     }
   }
 
