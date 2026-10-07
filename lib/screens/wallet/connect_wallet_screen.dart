@@ -67,12 +67,15 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
           _error = e.toString();
           _loading = false;
         });
+      }
     }
   }
 
   Future<void> _connect() async {
     if (_userId == null) {
-      setState(() => _error = 'Sign in before connecting a wallet.');
+      setState(() {
+        _error = 'Sign in before connecting a wallet.';
+      });
       return;
     }
 
@@ -85,7 +88,9 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
       final payload = WalletConnectionService.instance.createConnectionRequest();
       final uri = Uri.parse(payload);
       final encoded = uri.queryParameters['request'];
-      if (encoded == null) throw const WalletConnectionException('Invalid wallet request.');
+      if (encoded == null) {
+        throw const WalletConnectionException('Invalid wallet request.');
+      }
 
       final decoded = jsonDecode(
         utf8.decode(base64Url.decode(base64Url.normalize(encoded))),
@@ -109,7 +114,9 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
   }
 
   Future<void> _handleCallback(Uri uri) async {
-    if (uri.scheme != 'negosmint' || uri.host != 'wallet') return;
+    if (uri.scheme != 'negosmint' || uri.host != 'wallet') {
+      return;
+    }
     final encoded = uri.queryParameters['result'];
     final requestId = _pendingRequestId;
     if (encoded == null || requestId == null) {
@@ -122,8 +129,8 @@ class _ConnectWalletScreenState extends State<ConnectWalletScreen> {
       ) as Map<String, dynamic>;
       final userId = _userId;
       if (userId == null) {
-      return;
-    }
+        return;
+      }
 
       await WalletConnectionService.instance.saveApprovedConnection(
         userId: userId,
