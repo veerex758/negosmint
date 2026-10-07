@@ -83,6 +83,39 @@ class TaskCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text('${task.category} · ${task.minutes} min', style: const TextStyle(
               color: AppColors.textSecondary, fontSize: 12)),
+            if (task.advertiserName != null || task.advertiserRating != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  if (task.advertiserName != null)
+                    Flexible(
+                      child: Text(
+                        task.advertiserName!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  if (task.advertiserRating != null) ...[
+                    const SizedBox(width: 7),
+                    const Icon(Icons.star_rounded,
+                        size: 11, color: AppColors.highlight),
+                    const SizedBox(width: 2),
+                    Text(
+                      task.advertiserRating!.toStringAsFixed(1),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
             const SizedBox(height: 6),
             Row(children: [
               Container(
