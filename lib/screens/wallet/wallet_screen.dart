@@ -10,6 +10,7 @@ import '../../services/wallet_service.dart';
 import '../../models/wallet_transaction.dart';
 import 'withdraw_screen.dart';
 import 'deposit_screen.dart';
+import 'connect_wallet_screen.dart';
 
 typedef _WalletData = ({WalletBalance balance, List<WalletTransaction> txns});
 
@@ -236,6 +237,39 @@ class _WalletScreenState extends State<WalletScreen> {
                                       ),
                                     ),
                                   ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          GlassCard(
+                            borderRadius: 18,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.account_balance_wallet_outlined,
+                                    color: AppColors.highlight, size: 22),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Self-custody wallet',
+                                          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+                                      SizedBox(height: 3),
+                                      Text('Connect the separate NegosMint Wallet',
+                                          style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () async {
+                                    await Navigator.of(context).push(
+                                      appRoute(const ConnectWalletScreen()),
+                                    );
+                                  },
+                                  child: const Text('Connect',
+                                      style: TextStyle(color: AppColors.highlight, fontWeight: FontWeight.w700)),
                                 ),
                               ],
                             ),
