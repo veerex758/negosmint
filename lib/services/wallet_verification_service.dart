@@ -10,6 +10,7 @@ class WalletVerificationChallenge {
     required this.message,
     required this.chainId,
     required this.expiresAt,
+    required this.userId,
   });
 
   final String id;
@@ -17,15 +18,23 @@ class WalletVerificationChallenge {
   final int chainId;
   final DateTime expiresAt;
 
+  /// Task Platform account that created this challenge. This local binding
+  /// prevents submitting a pending proof after an account switch.
+  final String userId;
+
   bool get isExpired => !DateTime.now().toUtc().isBefore(expiresAt);
 
-  factory WalletVerificationChallenge.fromMap(Map<String, dynamic> map) {
+  factory WalletVerificationChallenge.fromMap(
+    Map<String, dynamic> map, {
+    required String userId,
+  }) {
     final id = map['challenge_id'];
     final message = map['message'];
     final chainId = map['chain_id'];
     final expiry = map['expires_at'];
 
-    if (id is! String ||
+    if (userId.isEmpty ||
+        id is! String ||
         id.isEmpty ||
         message is! String ||
         message.isEmpty ||
@@ -50,6 +59,7 @@ class WalletVerificationChallenge {
       message: message,
       chainId: chainId.toInt(),
       expiresAt: expiresAt,
+      userId: userId,
     );
     if (challenge.isExpired) {
       throw const WalletConnectionException(
@@ -110,7 +120,7 @@ class WalletVerificationService {
   static const _functionName = 'verify-wallet-link';
 
   Future<WalletVerificationChallenge> createChallenge() async {
-    _requireSignedInUser();
+    final user = _requireSignedInUser();
 
     final response = await supabase.functions.invoke(
       _functionName,
@@ -127,6 +137,7 @@ class WalletVerificationService {
 
     return WalletVerificationChallenge.fromMap(
       Map<String, dynamic>.from(data),
+      userId: user.id,
     );
   }
 
@@ -137,7 +148,12 @@ class WalletVerificationService {
     required String walletAddress,
     required String signature,
   }) async {
-    _requireSignedInUser();
+    final user = _requireSignedInUser();
+    if (user.id != challenge.userId) {
+      throw const WalletConnectionException(
+        'Your signed-in account changed. Start wallet verification again.',
+      );
+    }
     if (challenge.isExpired ||
         challenge.chainId != sepoliaChainId ||
         !RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(walletAddress) ||
