@@ -5,7 +5,7 @@ void main() {
   const challengeId = 'challenge-123';
   const chainId = WalletOwnershipHandoffResult.sepoliaChainId;
   const address = '0x1111111111111111111111111111111111111111';
-  final signature = '0x' + List.filled(130, 'a').join();
+  final signature = '0x${List.filled(130, 'a').join()}';
 
   Map<String, dynamic> validResult() => {
         'challengeId': challengeId,
