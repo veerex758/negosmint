@@ -18,6 +18,7 @@ Repositories:
 
 ### NegosMint Wallet
 - The wallet is non-custodial: seed phrases, private keys, PINs, and decrypted signing material stay on the device.
+- The current wallet `pubspec.yaml` does not include `supabase_flutter`, and `lib/app.dart` starts at the splash screen; there is no existing Supabase auth/session integration in the wallet app.
 - Its documented V1 network is Ethereum Sepolia (chain ID 11155111), with native ETH support and transfer foundations.
 - Its connection layer supports wallet-connection requests, but pairing/connection is not the same as proving ownership of a task-app account or enabling a funded withdrawal.
 
@@ -39,7 +40,8 @@ A database balance is an application ledger entry, not cryptocurrency held on-ch
 
 ## Delivery sequence
 
-- [ ] Confirm the two apps' intended production environment and Supabase project identity; do not assume they share a project or auth session.
+- [ ] Confirm the two apps' intended production environment and Supabase project identity; the task app uses build-time `SUPABASE_URL` / `SUPABASE_ANON_KEY`, while the wallet currently has no Supabase configuration or auth client. Do not assume they share a project or auth session.
+- [ ] Decide the account-linking UX: the user must authenticate to the same task account in the wallet or complete a secure handoff from the task app. A public address alone cannot identify which task account owns it.
 - [ ] Choose the first supported integration target. The lowest-risk initial milestone is linking and displaying a verified public address, without enabling withdrawals.
 - [ ] Add the server-side address/challenge schema and signature-verification endpoint.
 - [ ] Add wallet-side explicit approval and local signing of the challenge only; never expose key material.
