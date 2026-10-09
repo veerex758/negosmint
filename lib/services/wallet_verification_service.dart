@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/wallet_ownership_handoff_result.dart';
+
 import 'supabase_client.dart';
 
 /// A short-lived server-issued challenge used to prove control of a wallet.
@@ -185,6 +187,39 @@ class WalletVerificationService {
 
     return WalletVerificationResult.fromMap(
       Map<String, dynamic>.from(data),
+    );
+  }
+
+  /// Completes the proof after the Wallet App returns its activity result.
+  ///
+  /// The result is untrusted until the authenticated backend verifies the
+  /// signature. This method deliberately does not save to legacy
+  /// [wallet_connections] metadata.
+  Future<WalletVerificationResult> completeOwnershipHandoff({
+    required WalletVerificationChallenge challenge,
+    required Object? handoffResult,
+  }) async {
+    final user = _requireSignedInUser();
+    if (user.id != challenge.userId) {
+      throw const WalletConnectionException(
+        'Your signed-in account changed. Start wallet verification again.',
+      );
+    }
+    if (challenge.isExpired) {
+      throw const WalletConnectionException(
+        'The wallet verification request expired. Please try again.',
+      );
+    }
+
+    final result = WalletOwnershipHandoffResult.parse(
+      handoffResult,
+      expectedChallengeId: challenge.id,
+      expectedChainId: challenge.chainId,
+    );
+    return verifySignature(
+      challenge: challenge,
+      walletAddress: result.walletAddress,
+      signature: result.signature,
     );
   }
 
