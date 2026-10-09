@@ -2,7 +2,7 @@
 
 ## Status
 
-This document records the verified starting point and the safe integration sequence. It is not a claim that the two apps are already connected.
+The integration is being built in stages. The current pull request defines the safe architecture and adds a server-side challenge verifier, but the wallet signing UI and task-app callback are not yet wired to it. Do not treat the integration as complete.
 
 Repositories:
 - Task/rewards app: `veerex758/negosmint`
@@ -22,12 +22,19 @@ Repositories:
 - Its documented V1 network is Ethereum Sepolia (chain ID 11155111), with native ETH support and transfer foundations.
 - Its connection layer supports wallet-connection requests, but pairing/connection is not the same as proving ownership of a task-app account or enabling a funded withdrawal.
 
-
-### Existing connection flow: security gap found
+## Existing connection flow: security gap found
 
 The task app already has `wallet_connections` metadata and a `WalletConnectionService`. However, the current database migration grants authenticated users direct INSERT and UPDATE access to their own connection row, including `wallet_address`, `chain_id`, `network`, and `session_id`. The client checks that the callback says `approved`, matches a request ID, and has correctly shaped fields, but those checks alone do not cryptographically prove that the user controls the supplied address. A modified client can fabricate those fields.
 
-**Do not treat the existing row as a verified wallet identity or as sufficient authorization for payouts.** Before using it for withdrawals, replace direct client writes with a trusted server flow that verifies a short-lived, one-time signed challenge, and store verified ownership separately from ordinary connection/session metadata. The client should not be allowed to set its own verification status.
+**Do not treat the existing row as a verified wallet identity or as sufficient authorization for payouts.** Verified ownership is stored separately in `verified_wallet_addresses`; the client has SELECT-only access to that table and cannot create or change verified records.
+
+## Server-side challenge verifier added
+
+The task-app branch now includes:
+- `supabase/migrations/20261009_wallet_link_verification.sql`: challenge records, a separate verified-address table, RLS, and a service-role-only atomic challenge-consumption function.
+- `supabase/functions/verify-wallet-link/index.ts`: authenticated `create_challenge` and `verify_signature` actions. Challenges are bound to the signed-in user, exact message, Sepolia chain ID, random nonce, and five-minute expiry. Ethers verifies the signature; a database function atomically consumes the challenge and writes the verified address, preventing replay.
+
+**This is backend foundation, not end-to-end completion.** The wallet app still needs an explicit review screen and local message-signing action, and the task app still needs to submit the signature to this endpoint and display the verified address. The migration and Edge Function have not yet been deployed to Supabase or verified against the production project. Deploy only after confirming the intended Supabase project and reviewing the diff.
 
 ## Important compatibility gap
 
@@ -39,7 +46,7 @@ A database balance is an application ledger entry, not cryptocurrency held on-ch
 
 1. **Keep the ledger authoritative.** Approved task rewards remain in the task app's server-side ledger. Never let the wallet app or client set an earnings balance.
 2. **Link only public wallet data.** The wallet address may be shared after explicit user approval. Never send a seed phrase, private key, PIN, or decrypted key material to Supabase or the task app.
-3. **Prove address ownership before withdrawals.** A pasted address is not proof that the user controls it. Add a short-lived, one-time server challenge and have the wallet sign it locally; verify the signature server-side before marking an address as verified. Bind the challenge to the authenticated user, chain, expiry, and nonce, and prevent replay.
+3. **Prove address ownership before withdrawals.** A pasted address is not proof that the user controls it. Use a short-lived, one-time server challenge signed locally in the wallet and verified server-side. Bind it to the authenticated user, chain, expiry, and nonce, and prevent replay.
 4. **Separate linking from spending.** Linking a public address must not trigger a transaction, sign a transfer, or automatically approve a withdrawal. Every withdrawal needs a clear confirmation and a server-side balance check.
 5. **Use explicit network and asset checks.** Reject unsupported chain IDs/assets rather than silently switching networks or treating testnet funds as real value.
 6. **Make settlement auditable and idempotent.** Only a trusted server-side settlement process may finalize a withdrawal, with a verified transaction hash, correct chain, recipient, asset, and amount. Repeated callbacks must not double-debit or double-complete a withdrawal.
@@ -47,15 +54,15 @@ A database balance is an application ledger entry, not cryptocurrency held on-ch
 
 ## Delivery sequence
 
-- [ ] Confirm the two apps' intended production environment and Supabase project identity; the task app uses build-time `SUPABASE_URL` / `SUPABASE_ANON_KEY`, while the wallet currently has no Supabase configuration or auth client. Do not assume they share a project or auth session.
-- [ ] Decide the account-linking UX: the user must authenticate to the same task account in the wallet or complete a secure handoff from the task app. A public address alone cannot identify which task account owns it.
-- [ ] Choose the first supported integration target. The lowest-risk initial milestone is linking and displaying a verified public address, without enabling withdrawals.
-- [ ] Close the existing direct-write trust gap: introduce a verified-address record and short-lived challenge flow; only a trusted verifier may create/update verified ownership.
-- [ ] Add the server-side address/challenge schema and signature-verification endpoint.
-- [ ] Add wallet-side explicit approval and local signing of the challenge only; never expose key material.
-- [ ] Show verified address and supported chain in the task app.
+- [ ] Confirm the two apps' intended production environment and Supabase project identity. The task app uses build-time `SUPABASE_URL` / `SUPABASE_ANON_KEY`; the wallet currently has no Supabase configuration or auth client. Do not assume they share a project or auth session.
+- [x] Audit the existing client-writable connection metadata and separate it from verified ownership.
+- [x] Add the initial server-side address/challenge schema and signature-verification endpoint on the integration branch.
+- [ ] Add wallet-side explicit approval and local signing of the exact server challenge; never expose key material.
+- [ ] Replace task-app direct connection writes with the authenticated Edge Function flow and render the verified address.
+- [ ] Add tests for invalid, expired, mismatched, and replayed signatures/challenges; run Edge Function type checks and Flutter CI.
+- [ ] Deploy the migration and function to the confirmed Supabase project only after review.
 - [ ] Separately implement and audit funded withdrawal settlement for one supported asset/network.
-- [ ] Run CI, database migration checks, and end-to-end testnet tests before enabling any withdrawal UI.
+- [ ] Run end-to-end testnet tests before enabling any withdrawal UI.
 
 ## Release gate
 
