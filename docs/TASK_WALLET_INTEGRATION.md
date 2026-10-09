@@ -22,6 +22,13 @@ Repositories:
 - Its documented V1 network is Ethereum Sepolia (chain ID 11155111), with native ETH support and transfer foundations.
 - Its connection layer supports wallet-connection requests, but pairing/connection is not the same as proving ownership of a task-app account or enabling a funded withdrawal.
 
+
+### Existing connection flow: security gap found
+
+The task app already has `wallet_connections` metadata and a `WalletConnectionService`. However, the current database migration grants authenticated users direct INSERT and UPDATE access to their own connection row, including `wallet_address`, `chain_id`, `network`, and `session_id`. The client checks that the callback says `approved`, matches a request ID, and has correctly shaped fields, but those checks alone do not cryptographically prove that the user controls the supplied address. A modified client can fabricate those fields.
+
+**Do not treat the existing row as a verified wallet identity or as sufficient authorization for payouts.** Before using it for withdrawals, replace direct client writes with a trusted server flow that verifies a short-lived, one-time signed challenge, and store verified ownership separately from ordinary connection/session metadata. The client should not be allowed to set its own verification status.
+
 ## Important compatibility gap
 
 The task app's crypto-withdrawal schema describes USDT/USDC on several networks, while the wallet's documented V1 is Sepolia native ETH. These are not interchangeable. Do not present a withdrawal as supported, broadcast a payment, or mark it completed until the chosen asset/network is actually supported and a real settlement path is configured and tested.
@@ -43,6 +50,7 @@ A database balance is an application ledger entry, not cryptocurrency held on-ch
 - [ ] Confirm the two apps' intended production environment and Supabase project identity; the task app uses build-time `SUPABASE_URL` / `SUPABASE_ANON_KEY`, while the wallet currently has no Supabase configuration or auth client. Do not assume they share a project or auth session.
 - [ ] Decide the account-linking UX: the user must authenticate to the same task account in the wallet or complete a secure handoff from the task app. A public address alone cannot identify which task account owns it.
 - [ ] Choose the first supported integration target. The lowest-risk initial milestone is linking and displaying a verified public address, without enabling withdrawals.
+- [ ] Close the existing direct-write trust gap: introduce a verified-address record and short-lived challenge flow; only a trusted verifier may create/update verified ownership.
 - [ ] Add the server-side address/challenge schema and signature-verification endpoint.
 - [ ] Add wallet-side explicit approval and local signing of the challenge only; never expose key material.
 - [ ] Show verified address and supported chain in the task app.
