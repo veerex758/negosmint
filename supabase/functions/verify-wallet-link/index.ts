@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       if (!challenge || challenge.consumed_at || new Date(challenge.expires_at).getTime() <= Date.now()) {
         return json({ error: "Verification request expired or already used" }, 400);
       }
-      if (challenge.chain_id !== CHAIN_ID || challenge.message !== message) {
+      if (Number(challenge.chain_id) !== CHAIN_ID || challenge.message !== message) {
         return json({ error: "Challenge does not match" }, 400);
       }
 
