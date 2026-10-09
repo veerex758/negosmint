@@ -62,8 +62,10 @@ A database balance is an application ledger entry, not cryptocurrency held on-ch
 - [x] Audit the existing client-writable connection metadata and separate it from verified ownership.
 - [x] Add the initial server-side address/challenge schema and signature-verification endpoint on the integration branch.
 - [ ] Add wallet-side explicit approval and local signing of the exact server challenge; never expose key material.
-- [ ] Align the callback contract: use the authenticated Task App to create the challenge, then an HTTPS callback to submit the signature; do not rely on the current custom-scheme callback.
-- [ ] Replace task-app direct connection writes with the authenticated Edge Function flow and render the verified address.
+- [x] Add a Task App client service for authenticated challenge creation, signature submission, and read-only retrieval of the server-verified address.
+- [ ] Build the Task App UI flow around that service and launch the Wallet App with the exact challenge for explicit approval/signing.
+- [ ] Align transport end-to-end. The current verifier requires the Task App user's bearer session for signature submission; the existing custom-scheme callback and Wallet App HTTPS-only callback contract are incompatible. Do not accept an unauthenticated callback until a separate challenge-bound callback path is designed and reviewed.
+- [ ] Render the address from `verified_wallet_addresses`; never treat client-returned `wallet_connections` metadata as proof of ownership.
 - [ ] Add tests for invalid, expired, mismatched, and replayed signatures/challenges; run Edge Function type checks and Flutter CI.
 - [ ] Deploy the migration and function to the confirmed Supabase project only after review.
 - [ ] Separately implement and audit funded withdrawal settlement for one supported asset/network.
