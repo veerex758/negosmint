@@ -1,4 +1,5 @@
-import '../models/connected_wallet.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'supabase_client.dart';
 
 /// A short-lived server-issued challenge used to prove control of a wallet.
@@ -190,7 +191,7 @@ class WalletVerificationService {
     });
   }
 
-  dynamic _requireSignedInUser() {
+  User _requireSignedInUser() {
     final user = supabase.auth.currentUser;
     if (user == null) {
       throw const WalletConnectionException(
