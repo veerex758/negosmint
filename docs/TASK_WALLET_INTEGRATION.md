@@ -36,6 +36,10 @@ The task-app branch now includes:
 
 **This is backend foundation, not end-to-end completion.** The wallet app still needs an explicit review screen and local message-signing action, and the task app still needs to submit the signature to this endpoint and display the verified address. The migration and Edge Function have not yet been deployed to Supabase or verified against the production project. Deploy only after confirming the intended Supabase project and reviewing the diff.
 
+## Callback transport mismatch found
+
+The current Task App constructs a custom-scheme callback (`negosmint://wallet/callback`), but the wallet's request model and callback transport accept HTTPS callbacks only. Therefore the current callback contract is inconsistent and must be corrected before the two apps can complete the verification handshake. The safe planned flow is for the wallet to POST the approved signed challenge to the Task App's HTTPS Edge Function callback; the Task App then reads the resulting verified address from Supabase. Do not put signatures in URL query parameters, and do not accept an unverified deep-link result as proof of ownership.
+
 ## Important compatibility gap
 
 The task app's crypto-withdrawal schema describes USDT/USDC on several networks, while the wallet's documented V1 is Sepolia native ETH. These are not interchangeable. Do not present a withdrawal as supported, broadcast a payment, or mark it completed until the chosen asset/network is actually supported and a real settlement path is configured and tested.
@@ -58,6 +62,7 @@ A database balance is an application ledger entry, not cryptocurrency held on-ch
 - [x] Audit the existing client-writable connection metadata and separate it from verified ownership.
 - [x] Add the initial server-side address/challenge schema and signature-verification endpoint on the integration branch.
 - [ ] Add wallet-side explicit approval and local signing of the exact server challenge; never expose key material.
+- [ ] Align the callback contract: use the authenticated Task App to create the challenge, then an HTTPS callback to submit the signature; do not rely on the current custom-scheme callback.
 - [ ] Replace task-app direct connection writes with the authenticated Edge Function flow and render the verified address.
 - [ ] Add tests for invalid, expired, mismatched, and replayed signatures/challenges; run Edge Function type checks and Flutter CI.
 - [ ] Deploy the migration and function to the confirmed Supabase project only after review.
