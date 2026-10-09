@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/wallet_ownership_handoff_result.dart';
@@ -25,6 +27,26 @@ class WalletVerificationChallenge {
   final String userId;
 
   bool get isExpired => !DateTime.now().toUtc().isBefore(expiresAt);
+
+  /// Encodes only the server-issued public challenge for wallet-side review.
+  /// The deep link is transport, not proof; ownership is established only
+  /// after the Task App submits the returned signature to the authenticated API.
+  String toWalletOwnershipDeepLink() {
+    final envelope = {
+      'type': 'negosmint.wallet_ownership_request.v1',
+      'challengeId': id,
+      'message': message,
+      'chainId': chainId,
+      'expiresAt': expiresAt.toUtc().toIso8601String(),
+    };
+    final encoded = base64UrlEncode(utf8.encode(jsonEncode(envelope)))
+        .replaceAll('=', '');
+    return Uri(
+      scheme: 'negosmintwallet',
+      host: 'ownership',
+      queryParameters: {'request': encoded},
+    ).toString();
+  }
 
   factory WalletVerificationChallenge.fromMap(
     Map<String, dynamic> map, {
