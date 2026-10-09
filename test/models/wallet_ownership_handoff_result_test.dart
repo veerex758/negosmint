@@ -19,14 +19,14 @@ void main() {
 
   test('encodes the server challenge as a versioned wallet request link', () {
     final expiry = DateTime.utc(2026, 10, 9, 12, 2);
-    const message = 'NegosMint Wallet Ownership Verification\\n'
-        'Purpose: Link this self-custody wallet to the signed-in NegosMint Task Platform account.\\n'
-        'User ID: user-123\\n'
-        'Challenge ID: challenge-123\\n'
-        'Nonce: nonce-123\\n'
-        'Chain ID: 11155111\\n'
-        'Expires At: 2026-10-09T12:02:00.000Z\\n'
-        'This signature proves address control only. It does not authorize a transaction.\\n'
+    const message = 'NegosMint Wallet Ownership Verification\n'
+        'Purpose: Link this self-custody wallet to the signed-in NegosMint Task Platform account.\n'
+        'User ID: user-123\n'
+        'Challenge ID: challenge-123\n'
+        'Nonce: nonce-123\n'
+        'Chain ID: 11155111\n'
+        'Expires At: 2026-10-09T12:02:00.000Z\n'
+        'This signature proves address control only. It does not authorize a transaction.\n'
         'If you did not initiate this request, reject it.';
     final challenge = WalletVerificationChallenge(
       id: challengeId,
