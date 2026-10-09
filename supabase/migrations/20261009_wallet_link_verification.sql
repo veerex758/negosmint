@@ -55,7 +55,7 @@ as $$
 declare
   v_challenge public.wallet_link_challenges%rowtype;
 begin
-  if auth.role() <> 'service_role' then
+  if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'Service role required';
   end if;
   if p_chain_id <> 11155111
