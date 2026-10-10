@@ -7,11 +7,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Avoid spending runner time building several superseded commits from the same PR.
+concurrency:
+  group: task-apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build release APK
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -23,6 +27,15 @@ jobs:
           flutter-version: 3.47.3
           cache: true
 
+      # The Task App's Android build downloads NDK r28c and CMake 3.22.1.
+      # Keep these large SDK components between runs to avoid repeated downloads.
+      - name: Cache Android NDK and CMake
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/28.2.13676358
+            /usr/local/lib/android/sdk/cmake/3.22.1
+          key: ${{ runner.os }}-android-sdk-ndk-r28c-cmake-3.22.1-v1
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v6
@@ -48,7 +61,7 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
         run: |
-          flutter build apk --release \
+          flutter build apk --release --no-pub \
             --dart-define=SUPABASE_URL=$SUPABASE_URL \
             --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY \
             --dart-define=STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY
