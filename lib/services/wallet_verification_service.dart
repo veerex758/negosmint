@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/wallet_ownership_handoff_result.dart';
@@ -142,6 +143,37 @@ class WalletVerificationService {
   static final instance = WalletVerificationService._();
   static const sepoliaChainId = 11155111;
   static const _functionName = 'verify-wallet-link';
+  static const _handoffChannel =
+      MethodChannel('com.negosmint.task/wallet_handoff');
+
+  /// Opens the Wallet App through Android's activity-result contract.
+  /// The returned map is untrusted until completeOwnershipHandoff verifies it
+  /// against the authenticated backend.
+  Future<Object?> launchWalletOwnershipHandoff(
+    WalletVerificationChallenge challenge,
+  ) async {
+    if (challenge.isExpired ||
+        challenge.chainId != sepoliaChainId ||
+        _requireSignedInUser().id != challenge.userId) {
+      throw const WalletConnectionException(
+        'This wallet verification request is invalid or expired.',
+      );
+    }
+    try {
+      return await _handoffChannel.invokeMethod<Object?>(
+        'launchOwnershipRequest',
+        {'deepLink': challenge.toWalletOwnershipDeepLink()},
+      );
+    } on PlatformException catch (error) {
+      throw WalletConnectionException(
+        error.message ?? 'Could not complete the secure wallet handoff.',
+      );
+    } on MissingPluginException {
+      throw const WalletConnectionException(
+        'Secure wallet handoff is unavailable in this Android build.',
+      );
+    }
+  }
 
   Future<WalletVerificationChallenge> createChallenge() async {
     final user = _requireSignedInUser();
